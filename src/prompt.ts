@@ -13,11 +13,10 @@ function load() {
 }
 
 const openai = new OpenAI({
-        // baseURL: 'https://api.deepseek.com',
         apiKey: load(),
 });
 
-function setVariables(html: string) {
+function clean(html: string) {
     html.replace("```json", "");
     html.replace("```", "");
     return html;
@@ -28,7 +27,7 @@ function buildPrompt() {
     
     const basePrompt = fs.readFileSync(path.resolve(process.cwd(), "assets", "base_prompt.txt"), "utf-8");
 
-    const html = setVariables(raw);
+    const html = clean(raw);
 
     return `${basePrompt}\nHTML:\n${html}`;
 }
@@ -37,7 +36,6 @@ async function sendPrompt(message: string) {
   const completion = await openai.chat.completions.create({
     messages: [{ role: "system", content: message }],
     model: "gpt-4.1-mini",
-    // model: "deepseek-chat",
   });
 
   return completion.choices[0].message.content;
@@ -45,7 +43,7 @@ async function sendPrompt(message: string) {
 
 async function main() {
     const input = buildPrompt();
-    console.log(`INPUT LENGTH: ${input.length}`);
+    
     const res = await sendPrompt(input);
 
     fs.writeFileSync(

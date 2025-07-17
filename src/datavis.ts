@@ -21,20 +21,19 @@ const filtered = fs.readdirSync(path.resolve(process.cwd(), "buffer"))
     return acc;
 }, [] as Input[])
 .filter((property) => {
-    const sum = Number(property.price) + Number(property.iptu) + Number(property.condominio);
+    const sum = Number(property.price ?? 0) + Number(property.iptu ?? 0) + Number(property.condominio ?? 0);
 
-    return sum <= 1700;
+    return sum <= 1700 && sum >= 1300;
 })
 
-const clean = filtered.reduce((acc, el) => {
+const clean = Object.values(filtered.reduce((acc, el) => {
     if (acc[el.link]) {
         return acc;
     } else {
         acc[el.link] = el
     }
     return acc;
-}, {} as { [key: string]: Input })
-
-Object.values(clean)
+}, {} as { [key: string]: Input }))
 .sort((a,b) => a.area - b.area)
-fs.writeFileSync(path.resolve(process.cwd(), "output", `result-${Date.now()}.json`), JSON.stringify(filtered));
+
+fs.writeFileSync(path.resolve(process.cwd(), "output", `result-${Date.now()}.json`), JSON.stringify(clean));

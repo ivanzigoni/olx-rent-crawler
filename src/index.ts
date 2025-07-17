@@ -155,14 +155,20 @@ async function scrapeAllProperties(url: string) {
   const urls = [
     //zona leste
     "https://www.olx.com.br/imoveis/aluguel/estado-mg/belo-horizonte-e-regiao/zona-leste?ps=1000&pe=1700&sp=2&coe=500&ipe=500&ros=1&ros=2",
-    //centro
-    "https://www.olx.com.br/imoveis/aluguel/estado-mg/belo-horizonte-e-regiao/zona-centro-sul/centro?ps=1000&pe=1700&sp=2&coe=500&ipe=500&ros=1&ros=2",
-    //noroeste
-    "https://www.olx.com.br/imoveis/aluguel/estado-mg/belo-horizonte-e-regiao/zona-noroeste?ps=1000&pe=1700&sp=2&coe=500&ipe=500&ros=1&ros=2",
-    //grande belo horizonte
-    "https://www.olx.com.br/imoveis/aluguel/estado-mg/belo-horizonte-e-regiao/grande-belo-horizonte?ps=1000&pe=1700&sp=2&coe=500&ipe=500&ros=1&ros=2",
-    //belo horizonte ddd 31
-    "https://www.olx.com.br/imoveis/aluguel/estado-mg/belo-horizonte-e-regiao?ps=1000&pe=1700&sp=2&coe=500&ipe=500&ros=1&ros=2",
+    //zona centro sul
+    "https://www.olx.com.br/imoveis/aluguel/estado-mg/belo-horizonte-e-regiao/zona-centro-sul?ps=1000&pe=1700&sp=2&coe=500&ipe=500&ros=1&ros=2",
+    //carlos prates
+    "https://www.olx.com.br/imoveis/aluguel/estado-mg/belo-horizonte-e-regiao/zona-noroeste/carlos-prates?ps=1000&pe=1700&sp=2&coe=500&ipe=500&ret=1020&ret=1040&ros=1&ros=2",
+    //prado
+    "https://www.olx.com.br/imoveis/aluguel/estado-mg/belo-horizonte-e-regiao/zona-oeste/prado?ps=1000&pe=1700&sp=2&coe=500&ipe=500&ret=1020&ret=1040&ros=1&ros=2",
+    //padre eustaquio
+    "https://www.olx.com.br/imoveis/aluguel/estado-mg/belo-horizonte-e-regiao/zona-noroeste/padre-eustaquio?ps=1000&pe=1700&sp=2&coe=500&ipe=500&ret=1020&ret=1040&ros=1&ros=2",
+    //zona noroeste
+    // "https://www.olx.com.br/imoveis/aluguel/estado-mg/belo-horizonte-e-regiao/zona-noroeste?ps=1000&pe=1700&sp=2&coe=500&ipe=500&ros=1&ros=2",
+    // //grande belo horizonte
+    // "https://www.olx.com.br/imoveis/aluguel/estado-mg/belo-horizonte-e-regiao/grande-belo-horizonte?ps=1000&pe=1700&sp=2&coe=500&ipe=500&ros=1&ros=2",
+    // //belo horizonte ddd 31
+    // "https://www.olx.com.br/imoveis/aluguel/estado-mg/belo-horizonte-e-regiao?ps=1000&pe=1700&sp=2&coe=500&ipe=500&ros=1&ros=2",
     
   ]
 
@@ -178,10 +184,10 @@ async function scrapeAllProperties(url: string) {
 
   for (const url of urls) {
     const allProperties = await scrapeAllProperties(url);
-        fs.writeFileSync(
-            path.resolve(buffer_path, `${fileName(url)}-${Date.now()}.json`),
-            JSON.stringify(allProperties)
-        )
+    fs.writeFileSync(
+        path.resolve(buffer_path, `${fileName(url)}-${Date.now()}.json`),
+        JSON.stringify(allProperties)
+    )
   }
 
 })();
