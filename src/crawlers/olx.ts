@@ -1,31 +1,30 @@
-
-import puppeteer from 'puppeteer';
+import puppeteer, { Browser } from 'puppeteer';
 import fs from "node:fs";
 import path from "node:path";
 
-async function scrapeAllProperties(url: string) {
-  const browser = await puppeteer.launch({headless:false});
-  // const browser = await puppeteer.launch({headless: true});
-  const page = await browser.newPage();
+async function scrapeAllProperties(url: string, browser: Browser) {
 
-  // Open the first page
-  await page.goto(url);
-  // await page.goto(url, {waitUntil: 'networkidle2'});
+  console.log('Opening a new page...');
+  const page = await browser.newPage();
   
+  console.log('Initializing properties array and pagination flag...');
   let properties = [] as any[];
   let hasNextPage = true;
 
   while (hasNextPage) {
-    // Wait for property listing sections to load
-    // await page.waitForSelector('section.olx-adcard');
-    await page.waitForSelector('a[data-testid="adcard-link"]');
+    console.log(`Navigating to URL: ${url}`);
+    await page.goto(url, { waitUntil: "domcontentloaded" });
 
-    // Extract property info of the current page
+    console.log('Waiting for property cards to load...');
+    // await page.waitForSelector('a[data-testid="adcard-link"]');
+
+    console.log('Extracting property information from current page...');
     const propsOnPage = await page.evaluate(() => {
-      // Select all property cards
+      console.log('Selecting all property cards on the page...');
       const cards = Array.from(document.querySelectorAll('section.olx-adcard'));
 
       return cards.map(card => {
+        console.log('Processing individual property card...');
         // Link & Title
         const linkEl = card.querySelector('a.olx-adcard__link[href]') as any;
         const link = linkEl ? linkEl.href : null;
@@ -97,10 +96,10 @@ async function scrapeAllProperties(url: string) {
       });
     });
 
+    console.log(`Found ${propsOnPage.length} properties on this page. Adding to results...`);
     properties.push(...propsOnPage);
 
-    // Check if next page button exists and is enabled
-    // Using pagination buttons bottom, class 'ListingPagination_wrapper__y_Gg5' or just using "Próxima página" link
+    console.log('Checking if there is a next page...');
     hasNextPage = await page.evaluate(() => {
       const nextBtn = Array.from(document.querySelectorAll('button')).find(button => button.innerText.includes('Próxima página') || button.innerText.includes('Próxima'));
       if (nextBtn && !nextBtn.disabled) return true;
@@ -111,50 +110,60 @@ async function scrapeAllProperties(url: string) {
     });
 
     if (hasNextPage) {
-      // Try clicking the next page button or link
+      console.log('Next page available. Attempting to navigate...');
       let clicked = false;
 
-      // Try button first
+      console.log('Trying to click next page button...');
       const nextPageButton = await (page as any).$x("//button[contains(., 'Próxima página') or contains(., 'Próxima')]");
       if(nextPageButton.length > 0){
         try {
           await Promise.all([
             page.waitForNavigation(),
-            // page.waitForNavigation({ waitUntil: 'networkidle2' }),
             nextPageButton[0].click(),
           ]);
           clicked = true;
-        } catch(e) {clicked = false;}
+          console.log('Successfully clicked next page button.');
+        } catch(e) {
+          console.log('Failed to click next page button.');
+          clicked = false;
+        }
       }
 
-      // If no button or failed clicking, try link
       if (!clicked) {
+        console.log('Trying to click next page link...');
         const nextPageLink = await page.$('a[rel="next"], a[aria-label*="Próxima página"], a[aria-label*="Próxima"]');
         if(nextPageLink){
           try {
             await Promise.all([
               page.waitForNavigation(),
-              // page.waitForNavigation({ waitUntil: 'networkidle2' }),
               nextPageLink.click()
             ]);
             clicked = true;
-          } catch(e) {clicked = false;}
+            console.log('Successfully clicked next page link.');
+          } catch(e) {
+            console.log('Failed to click next page link.');
+            clicked = false;
+          }
         }
       }
 
       if(!clicked) {
-        // Can't navigate further, break loop
+        console.log('Could not navigate to next page. Ending pagination.');
         break;
       }
+    } else {
+      console.log('No more pages available. Ending pagination.');
     }
   }
 
-  await browser.close();
+  console.log(`Scraping complete. Found ${properties.length} properties in total.`);
+  await page.close();
   return properties;
 }
 
 
 (async () => {
+  console.log('Starting scraping process...');
   const urls = [
     //zona leste
     "https://www.olx.com.br/imoveis/aluguel/estado-mg/belo-horizonte-e-regiao/zona-leste?ps=1000&pe=1700&sp=2&coe=500&ipe=500&ros=1&ros=2",
@@ -166,31 +175,39 @@ async function scrapeAllProperties(url: string) {
     "https://www.olx.com.br/imoveis/aluguel/estado-mg/belo-horizonte-e-regiao/zona-oeste/prado?ps=1000&pe=1700&sp=2&coe=500&ipe=500&ret=1020&ret=1040&ros=1&ros=2",
     //padre eustaquio
     "https://www.olx.com.br/imoveis/aluguel/estado-mg/belo-horizonte-e-regiao/zona-noroeste/padre-eustaquio?ps=1000&pe=1700&sp=2&coe=500&ipe=500&ret=1020&ret=1040&ros=1&ros=2",
-    //zona noroeste
-    // "https://www.olx.com.br/imoveis/aluguel/estado-mg/belo-horizonte-e-regiao/zona-noroeste?ps=1000&pe=1700&sp=2&coe=500&ipe=500&ros=1&ros=2",
-    // //grande belo horizonte
-    // "https://www.olx.com.br/imoveis/aluguel/estado-mg/belo-horizonte-e-regiao/grande-belo-horizonte?ps=1000&pe=1700&sp=2&coe=500&ipe=500&ros=1&ros=2",
-    // //belo horizonte ddd 31
-    // "https://www.olx.com.br/imoveis/aluguel/estado-mg/belo-horizonte-e-regiao?ps=1000&pe=1700&sp=2&coe=500&ipe=500&ros=1&ros=2",
-    
   ]
 
+  console.log('Preparing file name generator function...');
   const fileName = (u: string) => u.split("?")[0].split("/")[u.split("?")[0].split("/").length - 1]
 
+  console.log('Setting up buffer directory...');
   const buffer_path = path.resolve(process.cwd(), "buffer") 
 
   if (fs.existsSync(buffer_path)){
+    console.log('Buffer directory exists. Removing it...');
     fs.rmSync(buffer_path, { recursive:true })
   }
 
+  console.log('Creating new buffer directory...');
   fs.mkdirSync(buffer_path)
 
+  console.log('Launching browser in non-headless mode...');
+  const browser = await puppeteer.launch({headless:false});
+
+  console.log('Starting to process each URL...');
   for (const url of urls) {
-    const allProperties = await scrapeAllProperties(url);
+    console.log(`Processing URL: ${url}`);
+    const allProperties = await scrapeAllProperties(url, browser);
+    console.log(`Writing results to file for ${fileName(url)}...`);
     fs.writeFileSync(
         path.resolve(buffer_path, `${fileName(url)}-${Date.now()}.json`),
         JSON.stringify(allProperties)
     )
+    console.log(`Finished processing ${url}`);
   }
 
+  console.log('Closing browser...');
+  await browser.close();
+
+  console.log('All URLs processed. Scraping complete.');
 })();

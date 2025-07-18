@@ -1,0 +1,189 @@
+```javascript
+const cheerio = require('cheerio');
+const axios = require('axios');
+const url = require('url');
+
+// Define the structure of each property
+/**
+ * @typedef {Object} Property
+ * @property {string} link
+ * @property {string} title
+ * @property {number} rooms
+ * @property {number} area
+ * @property {number} bathrooms
+ * @property {string} price
+ * @property {string | null} oldPrice
+ * @property {string} iptu
+ * @property {string} condominio
+ * @property {string} location
+ * @property {string} datePosted
+ */
+
+/**
+ * Parse integer from string safely.
+ */
+function parseIntSafe(str) {
+  if (!str) return 0;
+  const numStr = str.replace(/[^\d]/g, '');
+  return numStr ? parseInt(numStr, 10) : 0;
+}
+
+/**
+ * Parse decimal number from string safely.
+ */
+function parseFloatSafe(str) {
+  if (!str) return 0;
+  const numStr = str.replace(/[^\d,\.]/g, '').replace(',', '.');
+  return numStr ? parseFloat(numStr) : 0;
+}
+
+/**
+ * Main function to scrape properties and paginate.
+ * @param {string} baseUrl - the starting URL of the listing
+ * @returns {Promise<Property[]>}
+ */
+async function scrapeProperties(baseUrl) {
+  let nextPageUrl = baseUrl;
+  const properties = [];
+
+  while (nextPageUrl) {
+    try {
+      const { data: html } = await axios.get(nextPageUrl, {
+        headers: {
+          // Add user-agent to mimic a real browser
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) ' +
+                        'AppleWebKit/537.36 (KHTML, like Gecko) ' +
+                        'Chrome/115.0 Safari/537.36',
+        },
+      });
+
+      const $ = cheerio.load(html);
+
+      // Selector for property cards in horizontal listing
+      // from HTML sample, .olx-adcard__content is inside .olx-adcard, and details inside
+      $('.olx-adcard__content').each((_, element) => {
+        const ad = $(element);
+
+        // Link and title
+        const linkElem = ad.find('a[ data-testid="adcard-link"]');
+        const link = linkElem.attr('href') || '';
+        const title = linkElem.find('h2').first().text().trim();
+
+        // Rooms
+        let rooms = 0;
+        ad.find('.olx-adcard__detail').each((_, detailElem) => {
+          const detail = $(detailElem);
+          const ariaLabel = detail.attr('aria-label');
+          if (/quarto/i.test(ariaLabel)) {
+            rooms = parseIntSafe(ariaLabel);
+          }
+        });
+
+        // Area
+        let area = 0;
+        ad.find('.olx-adcard__detail').each((_, detailElem) => {
+          const detail = $(detailElem);
+          const ariaLabel = detail.attr('aria-label');
+          if (/metro/i.test(ariaLabel) || /m²/i.test(ariaLabel)) {
+            area = parseFloatSafe(ariaLabel);
+          }
+        });
+
+        // Bathrooms
+        let bathrooms = 0;
+        ad.find('.olx-adcard__detail').each((_, detailElem) => {
+          const detail = $(detailElem);
+          const ariaLabel = detail.attr('aria-label');
+          if (/banheiro/i.test(ariaLabel)) {
+            bathrooms = parseIntSafe(ariaLabel);
+          }
+        });
+
+        // Price and oldPrice
+        const priceMain = ad.find('h3.olx-adcard__price').text().trim() || '';
+        let oldPrice = null;
+        const oldPriceElem = ad.find('p.olx-adcard__old-price');
+        if (oldPriceElem.length) {
+          oldPrice = oldPriceElem.text().trim();
+        }
+        const price = priceMain;
+
+        // IPTU and Condomínio
+        let iptu = '';
+        let condominio = '';
+        ad.find('div.olx-adcard__price-info').each((_, infoElem) => {
+          const info = $(infoElem).text().trim();
+          if (/IPTU/i.test(info)) {
+            iptu = info.replace(/IPTU\s*/i, '').trim();
+          } else if (/Condomínio/i.test(info)) {
+            condominio = info.replace(/Condomínio\s*/i, '').trim();
+          }
+        });
+
+        // Location & datePosted
+        const location = ad.find('.olx-adcard__location').text().trim();
+        const datePosted = ad.find('.olx-adcard__date').text().trim();
+
+        // Add property object
+        properties.push({
+          link,
+          title,
+          rooms,
+          area,
+          bathrooms,
+          price,
+          oldPrice,
+          iptu,
+          condominio,
+          location,
+          datePosted,
+        });
+      });
+
+      // Pagination: find next page link that is enabled
+      // Look for <button> with a > <a> inside with text 'Próxima página'
+      // In sample HTML, buttons are disabled (aria-disabled true) if no next page
+      const nextButton = $('button').filter((_, el) => {
+        const btn = $(el);
+        const a = btn.find('a');
+        if (a.length === 0) return false;
+        const text = a.text().trim();
+        return /Próxima página/i.test(text) && btn.attr('aria-disabled') !== 'true';
+      }).first();
+
+      if (nextButton.length === 0) {
+        nextPageUrl = null; // no next page
+      } else {
+        // Compose full URL from href
+        const nextHref = nextButton.find('a').attr('href');
+        if (nextHref) {
+          nextPageUrl = url.resolve(baseUrl, nextHref);
+        } else {
+          nextPageUrl = null;
+        }
+      }
+    } catch (e) {
+      console.error(`Error fetching page: ${nextPageUrl}`, e);
+      break;
+    }
+  }
+
+  return properties;
+}
+
+// Example usage:
+(async () => {
+  const baseUrl = 'https://www.olx.com.br/imoveis/aluguel/estado-mg/belo-horizonte-e-regiao/zona-centro-sul?ps=1000&pe=1700&sp=2&coe=500&ipe=500&ros=1&ros=2&o=1';
+  const allProperties = await scrapeProperties(baseUrl);
+  console.log(allProperties);
+})();
+```
+This code:
+- Loads the first listing page using axios and cheerio.
+- Parses each property card extracting required data.
+- Extracts link, title, rooms, area (in m²), bathrooms, price, oldPrice, IPTU, Condomínio, location, and date posted.
+- Detects pagination and continues crawling until no next page.
+- Accumulates all properties in an array and logs them at the end.
+
+Make sure to have `axios` and `cheerio` installed (`npm install axios cheerio`).  
+Also adapt the baseUrl to your starting page URL.

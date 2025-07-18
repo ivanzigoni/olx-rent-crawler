@@ -20,10 +20,10 @@ const filtered = fs.readdirSync(path.resolve(process.cwd(), "buffer"))
     acc = [...acc, ...JSON.parse(fs.readFileSync(path.resolve(process.cwd(), "buffer", p), "utf-8"))];
     return acc;
 }, [] as Input[])
-.filter((property) => {
+.filter((property: Input) => {
     const sum = Number(property.price ?? 0) + Number(property.iptu ?? 0) + Number(property.condominio ?? 0);
 
-    return sum <= 1700 && sum >= 1300;
+    return sum <= 1700 && sum >= 1300 && property.area && property.area >= 35;
 })
 
 const clean = Object.values(filtered.reduce((acc, el) => {

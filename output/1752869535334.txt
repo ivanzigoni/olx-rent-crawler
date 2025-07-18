@@ -1,0 +1,122 @@
+Here's an example of JavaScript code using the cheerio library that extracts all properties on the provided page HTML.  
+Note: Since the HTML content you sent corresponds to a single page of listings, and the pagination links are present, but you didn't provide multiple pages HTML or a way to fetch them programmatically, I'll focus on extraction from the given HTML string and show how to detect pagination URLs. You can later adapt to fetch and parse each page.  
+The code extracts properties based on the `.olx-adcard` elements and pulls the requested data fields, parsing numbers when needed, returning the array of property objects as JSON.
+
+```js
+const cheerio = require('cheerio');
+
+function extractPropertiesFromHtml(html) {
+  const $ = cheerio.load(html);
+
+  const properties = [];
+
+  // Each property ad card is a .olx-adcard with data-mode horizontal (these are the listings)
+  // from your HTML example, focusing on main listings in the search results (not ads)
+  $('.olx-adcard__content[data-mode="horizontal"]').each((_, el) => {
+    const el$ = $(el);
+
+    // Link and title
+    const linkElement = el$.find('a.olx-adcard__link').first();
+    const link = (linkElement.attr('href') || '').trim();
+    const title = (linkElement.find('h2').text() || '').trim();
+
+    // Rooms, area, bathrooms may be indicated in olx-adcard__detail divs with aria-label
+    // Each has aria-label like "1 quarto", "55 metros quadrados", "1 banheiro", or similar
+    let rooms = null;
+    let area = null;
+    let bathrooms = null;
+
+    el$.find('.olx-adcard__details > .olx-adcard__detail').each((_, detail) => {
+      const label = $(detail).attr('aria-label')?.toLowerCase() || '';
+      const text = $(detail).text().trim();
+
+      // Extract rooms number
+      if (label.includes('quarto')) {
+        // e.g. "1 quarto"
+        const match = label.match(/(\d+)/);
+        rooms = match ? Number(match[1]) : null;
+      }
+      // Extract area number
+      else if (label.includes('metros quadrados') || label.includes('m²') || label.includes('m2')) {
+        const match = label.match(/(\d+)/);
+        area = match ? Number(match[1]) : null;
+      }
+      // Extract bathrooms number
+      else if (label.includes('banheiro')) {
+        const match = label.match(/(\d+)/);
+        bathrooms = match ? Number(match[1]) : null;
+      }
+    });
+
+    // Price main
+    // Price is in a h3 with class olx-adcard__price inside .olx-adcard__mediumbody
+    let price = null;
+    let oldPrice = null;
+    const mediumBody = el$.find('.olx-adcard__mediumbody').first();
+    const priceText = mediumBody.find('.olx-adcard__price').text().trim();
+    if (priceText) {
+      price = priceText;
+    }
+    // old price for discount
+    const oldPriceText = mediumBody.find('.olx-adcard__old-price').text().trim();
+    oldPrice = oldPriceText ? oldPriceText : null;
+
+    // IPTU and condominio info are in divs with data-testid="adcard-price-info"
+    let iptu = '';
+    let condominio = '';
+    mediumBody.find('div[data-testid="adcard-price-info"]').each((_, infoEl) => {
+      const infoText = $(infoEl).text().toLowerCase();
+      if (infoText.includes('iptu')) {
+        iptu = $(infoEl).text().trim();
+      } else if (infoText.includes('condomínio')) {
+        condominio = $(infoEl).text().trim();
+      }
+    });
+
+    // Location and date posted are in .olx-adcard__bottombody, inside
+    // .olx-adcard__location-date > p.olx-adcard__location (location)
+    // and p.olx-adcard__date (datePosted)
+    const bottomBody = el$.closest('.olx-adcard__content').find('.olx-adcard__bottombody').first();
+    let location = bottomBody.find('p.olx-adcard__location').text().trim();
+    let datePosted = bottomBody.find('p.olx-adcard__date').text().trim();
+
+    properties.push({
+      link,
+      title,
+      rooms,
+      area,
+      bathrooms,
+      price,
+      oldPrice,
+      iptu,
+      condominio,
+      location,
+      datePosted,
+    });
+  });
+
+  return properties;
+}
+
+// Usage example with your HTML stored in `htmlContent` (string):
+// const fs = require('fs');
+// const htmlContent = fs.readFileSync('path-to-html-file.html', 'utf-8');
+// const properties = extractPropertiesFromHtml(htmlContent);
+// console.log(JSON.stringify(properties, null, 2));
+
+module.exports = { extractPropertiesFromHtml };
+```
+
+# Explanation:
+- Properties are identified by `.olx-adcard__content[data-mode="horizontal"]` which represents each listing card.
+- Title and link come from the anchor with class `.olx-adcard__link`, title from its `<h2>`.
+- Rooms, area, and bathrooms are inside `.olx-adcard__detail` with aria-labels indicating the number and type.
+- Price is in `.olx-adcard__price`, and oldPrice is optionally found in `.olx-adcard__old-price`.
+- IPTU and Condomínio costs are within div with `data-testid="adcard-price-info"`.
+- Location and date posted are extracted from `.olx-adcard__location` and `.olx-adcard__date` inside the bottom body.
+- Numeric fields like rooms, area, bathrooms are converted to numbers when possible.
+- Prices and fees remain strings as requested.
+
+If you want to scrape multiple pages, you can parse pagination links from the element with id `listing-pagination`. Get the next page URL and iterate with HTTP requests fetching the HTML and calling `extractPropertiesFromHtml`.
+
+Let me know if you want full multi-page navigation implementation or how to fetch pages for scraping!
