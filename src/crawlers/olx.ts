@@ -9,7 +9,8 @@ async function scrapeAllProperties(url: string) {
   const page = await browser.newPage();
 
   // Open the first page
-  await page.goto(url, {waitUntil: 'networkidle2'});
+  await page.goto(url);
+  // await page.goto(url, {waitUntil: 'networkidle2'});
   
   let properties = [] as any[];
   let hasNextPage = true;
@@ -118,7 +119,8 @@ async function scrapeAllProperties(url: string) {
       if(nextPageButton.length > 0){
         try {
           await Promise.all([
-            page.waitForNavigation({ waitUntil: 'networkidle2' }),
+            page.waitForNavigation(),
+            // page.waitForNavigation({ waitUntil: 'networkidle2' }),
             nextPageButton[0].click(),
           ]);
           clicked = true;
@@ -131,7 +133,8 @@ async function scrapeAllProperties(url: string) {
         if(nextPageLink){
           try {
             await Promise.all([
-              page.waitForNavigation({ waitUntil: 'networkidle2' }),
+              page.waitForNavigation(),
+              // page.waitForNavigation({ waitUntil: 'networkidle2' }),
               nextPageLink.click()
             ]);
             clicked = true;

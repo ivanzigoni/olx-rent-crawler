@@ -1,0 +1,22 @@
+i will supply you with an html file. this is from a property for rent listing website called olx.
+my goal is to have all properties listed (from all pages) saved as a json.
+i will use puppeteer to load the page and perform the following:
+- go through the listing and obtain all properties information
+- go through all pages
+- return a json array with the properties listed
+generate the pupeteer code that will perform this task.
+the returned objects must follow this example:
+    {
+        "link": "https://mg.olx.com.br/belo-horizonte-e-regiao/imoveis/apto-1-quarto-270-m-da-contorno-1415712296",
+        "title": "Apto 1 quarto 270 m da Contorno ",
+        "rooms": 1,
+        "area": 30,
+        "bathrooms": 1,
+        "price": "1250",
+        "oldPrice": "R$ 1.350",
+        "iptu": "39",
+        "condominio": "285",
+        "location": "Belo Horizonte, Santa Tereza",
+        "datePosted": "28 de jun, 19:08"
+    },
+and any values that cant be found in the page should be left as an empty string

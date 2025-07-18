@@ -1,4 +1,4 @@
-i will supply you with an html file. this is from a property for rent listing website called olx.
+i will supply you with an html file. this is from a property for rent listing website called viva real.
 my goal is to have all properties listed (from all pages) saved as a json.
 i will use puppeteer to load the page and perform the following:
 - go through the listing and obtain all properties information
