@@ -1,4 +1,4 @@
-import * as fs from 'fs/promises';
+import * as fs from "fs/promises";
 import path from "node:path";
 
 interface Property {
@@ -17,49 +17,82 @@ interface Property {
 export async function generatePropertiesHtml(
   jsonFilePath: string,
   outputHtmlPath: string,
-  rowsPerPage = 10,
+  rowsPerPage = 10
 ) {
   // Load JSON array
-  const jsonData = await fs.readFile(jsonFilePath, 'utf-8');
+  const jsonData = await fs.readFile(jsonFilePath, "utf-8");
   const properties: Property[] = JSON.parse(jsonData);
 
   // Columns data for table and sorting info
   const columns = [
-    { key: 'link', label: 'Link', sortable: false },
-    { key: 'title', label: 'Title', sortable: false },
-    { key: 'bedrooms', label: 'Rooms', sortable: true },
-    { key: 'area', label: 'Area (m²)', sortable: true },
-    { key: 'bathrooms', label: 'Bathrooms', sortable: true },
-    { key: 'price', label: 'Price', sortable: true },
-    { key: 'iptu', label: 'IPTU', sortable: true },
-    { key: 'condominio', label: 'Condominio', sortable: true },
-    { key: 'location', label: 'Location', sortable: false },
-    { key: 'datePosted', label: 'Date Posted', sortable: false },
+    { key: "link", label: "LINK", sortable: false },
+    { key: "title", label: "TITULO", sortable: false },
+    { key: "price", label: "ALUGUEL", sortable: true },
+    { key: "iptu", label: "IPTU", sortable: true },
+    { key: "condominio", label: "CONDOMINIO", sortable: true },
+    { key: "totalPrice", label: "TOTAL", sortable: true },
+    { key: "area", label: "AREA", sortable: true },
+    { key: "bedrooms", label: "QUARTO", sortable: true },
+    { key: "bathrooms", label: "BANHEIRO", sortable: true },
+    { key: "location", label: "LOCALIZACAO", sortable: false },
+    { key: "datePosted", label: "DATA ANUNCIO", sortable: false },
   ];
-
 
   const html = `<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Properties for Rent</title>
+<title>AGREGADOR ALUGUEL</title>
 <style>
-  body { font-family: Arial, sans-serif; padding: 20px; }
-  table { border-collapse: collapse; width: 100%; }
-  th, td { border: 1px solid #ddd; padding: 8px; }
-  th { cursor: pointer; background-color: #f2f2f2; user-select: none; }
-  th.sortable:hover { background-color: #ddd; }
-  th.asc::after { content: " ▲"; }
-  th.desc::after { content: " ▼"; }
-  a { color: blue; text-decoration: underline; }
-  .pagination { margin-top: 10px; }
-  .pagination button { padding: 6px 12px; margin-right: 4px; }
+      body {
+        font-family: Arial, sans-serif;
+        padding: 20px;
+      }
+      table {
+        border-collapse: collapse;
+        width: 100%;
+        height: 80vh;
+      }
+      tr {
+        height: 50px;
+      }
+      th,
+      td {
+        border: 1px solid #ddd;
+        padding: 8px;
+      }
+      th {
+        cursor: pointer;
+        background-color: #f2f2f2;
+        user-select: none;
+      }
+      th.sortable:hover {
+        background-color: #ddd;
+      }
+      th.asc::after {
+        content: " ▲";
+      }
+      th.desc::after {
+        content: " ▼";
+      }
+      a {
+        color: blue;
+        text-decoration: underline;
+      }
+      .pagination {
+        margin-top: 10px;
+      }
+      .pagination button {
+        padding: 6px 12px;
+        margin-right: 4px;
+      }
+      .row-dark {
+        background-color: #f2f2f2;
+      }
 </style>
 </head>
 <body>
-
-<h2>Properties for Rent</h2>
 
 <table id="propertiesTable">
   <thead>
@@ -68,9 +101,9 @@ export async function generatePropertiesHtml(
         .map((col) =>
           col.sortable
             ? `<th class="sortable" data-key="${col.key}">${col.label}</th>`
-            : `<th>${col.label}</th>`,
+            : `<th>${col.label}</th>`
         )
-        .join('')}
+        .join("")}
     </tr>
   </thead>
   <tbody id="tableBody">
@@ -110,16 +143,17 @@ export async function generatePropertiesHtml(
 
     const tbody = document.getElementById('tableBody');
     tbody.innerHTML = pageData
-      .map((item) => \`
-        <tr>
-          <td><a href="\${item.link}" target="_blank" rel="noopener noreferrer">Link</a></td>
+      .map((item, i) => \`
+        <tr class=\${i%2===0?"":"row-dark"}>
+          <td><a href="\${item.link}" target="_blank" rel="noopener noreferrer">\${item.origin}</a></td>
           <td>\${item.title}</td>
-          <td>\${item.bedrooms}</td>
+          <td>\${item.price.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</td>
+          <td>\${item.iptu.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</td>
+          <td>\${item.condominio.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</td>
+          <td>\${item.totalPrice.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</td>
           <td>\${item.area}</td>
+          <td>\${item.bedrooms}</td>
           <td>\${item.bathrooms}</td>
-          <td>\${item.price.toLocaleString('en-US', { style: 'currency', currency: 'USD' })}</td>
-          <td>\${item.iptu.toLocaleString('en-US', { style: 'currency', currency: 'USD' })}</td>
-          <td>\${item.condominio.toLocaleString('en-US', { style: 'currency', currency: 'USD' })}</td>
           <td>\${item.location}</td>
           <td>\${item.datePosted}</td>
         </tr>\`).join('');
@@ -197,6 +231,6 @@ export async function generatePropertiesHtml(
 </body>
 </html>`;
 
-  await fs.writeFile(outputHtmlPath, html, 'utf-8');
+  await fs.writeFile(outputHtmlPath, html, "utf-8");
   console.log(`HTML file saved to: ${outputHtmlPath}`);
 }

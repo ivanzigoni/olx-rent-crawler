@@ -1,15 +1,19 @@
 import cp from "node:child_process";
+import olx from "./crawlers/olx";
+import vr from "./crawlers/viva-real";
+import puppeteer from "puppeteer";
 
 async function main() {
-    try {
-        await Promise.all([
-            cp.exec("npm run crawler:olx"),
-            cp.exec("npm run crawler:viva-real")
-        ])
-        cp.execSync("npm run datavis");
-    } catch (e) {
-        console.log(e);
-        process.exit(0);
-    }
+  try {
+    const browser = await puppeteer.launch({ headless: false });
+    await Promise.all([olx(browser), vr(browser)]);
+    cp.execSync("npm run datavis");
+    cp.execSync("npm run buffer:clean");
+    await browser.close();
+  } catch (e) {
+    console.log("ERROR");
+    console.log(e);
+    process.exit(0);
+  }
 }
 main();

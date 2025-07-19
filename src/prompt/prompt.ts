@@ -5,32 +5,38 @@ import path from "node:path";
 dotenv.config();
 
 function load() {
-  if (!process.env['GPT_KEY']) {
-    throw Error("MUST PROVIDE GPT_KEY")
+  if (!process.env["GPT_KEY"]) {
+    throw Error("MUST PROVIDE GPT_KEY");
   }
 
-  return process.env['GPT_KEY']
+  return process.env["GPT_KEY"];
 }
 
 const openai = new OpenAI({
-        apiKey: load(),
+  apiKey: load(),
 });
 
 function clean(html: string) {
-    html.replace("```json", "");
-    html.replace("```", "");
-    return html;
+  html.replace("```json", "");
+  html.replace("```", "");
+  return html;
 }
 
 function buildPrompt() {
-    const raw = fs.readFileSync(path.resolve(process.cwd(), "assets", "sample.html"), "utf-8");
-    
-    const basePrompt = fs.readFileSync(path.resolve(process.cwd(), "assets", "base_prompt.txt"), "utf-8");
+  const raw = fs.readFileSync(
+    path.resolve(process.cwd(), "assets", "sample.html"),
+    "utf-8"
+  );
 
-    const html = clean(raw);
+  const basePrompt = fs.readFileSync(
+    path.resolve(process.cwd(), "assets", "base_prompt.txt"),
+    "utf-8"
+  );
 
-    return `${basePrompt}`;
-    // return `${basePrompt}\nHTML:\n${html}`;
+  const html = clean(raw);
+
+  return `${basePrompt}`;
+  // return `${basePrompt}\nHTML:\n${html}`;
 }
 
 async function sendPrompt(message: string) {
@@ -43,14 +49,14 @@ async function sendPrompt(message: string) {
 }
 
 async function main() {
-    const input = buildPrompt();
-    
-    const res = await sendPrompt(input);
+  const input = buildPrompt();
 
-    fs.writeFileSync(
-        path.resolve(process.cwd(), "output", `${Date.now()}.txt`),
-        res ?? ""
-    )
+  const res = await sendPrompt(input);
+
+  fs.writeFileSync(
+    path.resolve(process.cwd(), "output", `${Date.now()}.txt`),
+    res ?? ""
+  );
 }
 
 main();
