@@ -1,30 +1,25 @@
 import puppeteer, { Browser } from 'puppeteer';
 import fs from "node:fs";
 import path from "node:path";
+import { getConfig } from '../config';
 
 async function scrapeAllProperties(url: string, browser: Browser) {
 
-  console.log('Opening a new page...');
   const page = await browser.newPage();
   
-  console.log('Initializing properties array and pagination flag...');
   let properties = [] as any[];
   let hasNextPage = true;
 
   while (hasNextPage) {
-    console.log(`Navigating to URL: ${url}`);
+
     await page.goto(url, { waitUntil: "domcontentloaded" });
 
-    console.log('Waiting for property cards to load...');
-    // await page.waitForSelector('a[data-testid="adcard-link"]');
-
-    console.log('Extracting property information from current page...');
     const propsOnPage = await page.evaluate(() => {
-      console.log('Selecting all property cards on the page...');
+  
       const cards = Array.from(document.querySelectorAll('section.olx-adcard'));
 
       return cards.map(card => {
-        console.log('Processing individual property card...');
+    
         // Link & Title
         const linkEl = card.querySelector('a.olx-adcard__link[href]') as any;
         const link = linkEl ? linkEl.href : null;
@@ -83,23 +78,23 @@ async function scrapeAllProperties(url: string, browser: Browser) {
         return {
           link,
           title,
-          rooms,
-          area,
-          bathrooms,
-          price: priceText,
-          oldPrice: oldPriceText,
-          iptu: priceInfos.iptu,
-          condominio: priceInfos.condominio,
+          rooms: rooms ? Number(rooms) : 0,
+          area: area ? Number(area) : 0,
+          bathrooms: bathrooms ? Number(bathrooms) : 0,
+          price: priceText ? Number(priceText) : 0,
+          oldPrice: oldPriceText ? Number(oldPriceText) : 0,
+          iptu: priceInfos.iptu ? Number(priceInfos.iptu) : 0,
+          condominio: priceInfos.condominio ? Number(priceInfos.condominio) : 0,
           location,
           datePosted,
         };
       });
     });
 
-    console.log(`Found ${propsOnPage.length} properties on this page. Adding to results...`);
+
     properties.push(...propsOnPage);
 
-    console.log('Checking if there is a next page...');
+
     hasNextPage = await page.evaluate(() => {
       const nextBtn = Array.from(document.querySelectorAll('button')).find(button => button.innerText.includes('Próxima página') || button.innerText.includes('Próxima'));
       if (nextBtn && !nextBtn.disabled) return true;
@@ -110,10 +105,10 @@ async function scrapeAllProperties(url: string, browser: Browser) {
     });
 
     if (hasNextPage) {
-      console.log('Next page available. Attempting to navigate...');
+  
       let clicked = false;
 
-      console.log('Trying to click next page button...');
+  
       const nextPageButton = await (page as any).$x("//button[contains(., 'Próxima página') or contains(., 'Próxima')]");
       if(nextPageButton.length > 0){
         try {
@@ -122,15 +117,15 @@ async function scrapeAllProperties(url: string, browser: Browser) {
             nextPageButton[0].click(),
           ]);
           clicked = true;
-          console.log('Successfully clicked next page button.');
+      
         } catch(e) {
-          console.log('Failed to click next page button.');
+      
           clicked = false;
         }
       }
 
       if (!clicked) {
-        console.log('Trying to click next page link...');
+    
         const nextPageLink = await page.$('a[rel="next"], a[aria-label*="Próxima página"], a[aria-label*="Próxima"]');
         if(nextPageLink){
           try {
@@ -139,75 +134,53 @@ async function scrapeAllProperties(url: string, browser: Browser) {
               nextPageLink.click()
             ]);
             clicked = true;
-            console.log('Successfully clicked next page link.');
+        
           } catch(e) {
-            console.log('Failed to click next page link.');
+        
             clicked = false;
           }
         }
       }
 
       if(!clicked) {
-        console.log('Could not navigate to next page. Ending pagination.');
+    
         break;
       }
     } else {
-      console.log('No more pages available. Ending pagination.');
+  
     }
   }
 
-  console.log(`Scraping complete. Found ${properties.length} properties in total.`);
   await page.close();
   return properties;
 }
 
 
 (async () => {
-  console.log('Starting scraping process...');
-  const urls = [
-    //zona leste
-    "https://www.olx.com.br/imoveis/aluguel/estado-mg/belo-horizonte-e-regiao/zona-leste?ps=1000&pe=1700&sp=2&coe=500&ipe=500&ros=1&ros=2",
-    //zona centro sul
-    "https://www.olx.com.br/imoveis/aluguel/estado-mg/belo-horizonte-e-regiao/zona-centro-sul?ps=1000&pe=1700&sp=2&coe=500&ipe=500&ros=1&ros=2",
-    //carlos prates
-    "https://www.olx.com.br/imoveis/aluguel/estado-mg/belo-horizonte-e-regiao/zona-noroeste/carlos-prates?ps=1000&pe=1700&sp=2&coe=500&ipe=500&ret=1020&ret=1040&ros=1&ros=2",
-    //prado
-    "https://www.olx.com.br/imoveis/aluguel/estado-mg/belo-horizonte-e-regiao/zona-oeste/prado?ps=1000&pe=1700&sp=2&coe=500&ipe=500&ret=1020&ret=1040&ros=1&ros=2",
-    //padre eustaquio
-    "https://www.olx.com.br/imoveis/aluguel/estado-mg/belo-horizonte-e-regiao/zona-noroeste/padre-eustaquio?ps=1000&pe=1700&sp=2&coe=500&ipe=500&ret=1020&ret=1040&ros=1&ros=2",
-  ]
+  const urls = getConfig().olx.startUrl;
 
-  console.log('Preparing file name generator function...');
   const fileName = (u: string) => u.split("?")[0].split("/")[u.split("?")[0].split("/").length - 1]
 
-  console.log('Setting up buffer directory...');
-  const buffer_path = path.resolve(process.cwd(), "buffer") 
+  const buffer_path = path.resolve(process.cwd(), "buffer", "olx"); 
 
   if (fs.existsSync(buffer_path)){
-    console.log('Buffer directory exists. Removing it...');
     fs.rmSync(buffer_path, { recursive:true })
   }
 
-  console.log('Creating new buffer directory...');
   fs.mkdirSync(buffer_path)
 
-  console.log('Launching browser in non-headless mode...');
   const browser = await puppeteer.launch({headless:false});
 
-  console.log('Starting to process each URL...');
+
   for (const url of urls) {
-    console.log(`Processing URL: ${url}`);
+
     const allProperties = await scrapeAllProperties(url, browser);
-    console.log(`Writing results to file for ${fileName(url)}...`);
+
     fs.writeFileSync(
         path.resolve(buffer_path, `${fileName(url)}-${Date.now()}.json`),
         JSON.stringify(allProperties)
     )
-    console.log(`Finished processing ${url}`);
   }
 
-  console.log('Closing browser...');
   await browser.close();
-
-  console.log('All URLs processed. Scraping complete.');
 })();
