@@ -1,4 +1,5 @@
 **/**.json
+src/**.html
+output/**.html
 node_modules
 .env
-.html
