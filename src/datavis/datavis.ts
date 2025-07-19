@@ -41,12 +41,13 @@ function loadBuffer(baseBufferPath: string) {
 
 const filtered = loadBuffer(path.resolve(process.cwd(), "buffer")).filter(
   (property: Input) => {
-    const sum =
-      Number(property.price ?? 0) +
-      Number(property.iptu ?? 0) +
-      Number(property.condominio ?? 0);
-
-    return sum <= 1700 && sum >= 1300 && property.area && property.area >= 35;
+    return (
+      property.totalPrice &&
+      property.totalPrice <= 1700 &&
+      property.totalPrice >= 1300 &&
+      property.area &&
+      property.area >= 35
+    );
   }
 );
 

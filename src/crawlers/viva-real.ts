@@ -1,4 +1,4 @@
-import { Browser } from "puppeteer";
+import { Browser, ConsoleMessage } from "puppeteer";
 
 const puppeteer = require("puppeteer");
 const path = require("node:path");
@@ -7,14 +7,7 @@ const { getConfig } = require("../config");
 
 async function scrapeAllProperties(initialURL: string, browser: Browser) {
   const page = await browser.newPage();
-
-  // page.on("framedetached", (frame) => {
-  //   console.log(`Frame detached: ${frame.url()}`);
-  //   //  page.
-  // });
-  // browser.on("disconnected", () => {
-  //   console.log("Browser disconnected.");
-  // });
+  page.on("console", (log: ConsoleMessage) => console.log("[VR]", log.text()));
 
   const results: any[] = [];
 
@@ -161,10 +154,10 @@ async function scrapeAllProperties(initialURL: string, browser: Browser) {
         ]);
       }
     }
-    page.close();
     return results;
   } catch (e) {
-    console.log("failed do to frame closing. will process what went so far");
+    console.log("[VR][ERROR] - ERROR TRYING TO SCRAPE");
+    console.log(e);
     return results;
   }
 }

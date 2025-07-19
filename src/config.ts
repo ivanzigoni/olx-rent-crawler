@@ -8,6 +8,9 @@ export type Env = {
   "viva-real": {
     startUrl: string;
   };
+  "zap-imoveis": {
+    startUrl: string;
+  };
 };
 
 export function getConfig() {
@@ -17,7 +20,7 @@ export function getConfig() {
     throw new Error("must provide config");
   }
 
-  const config: object = JSON.parse(fs.readFileSync(configPath, "utf-8"));
+  const config: Env = JSON.parse(fs.readFileSync(configPath, "utf-8"));
 
   if (!config) {
     throw new Error("must provide config");
@@ -31,5 +34,9 @@ export function getConfig() {
     throw new Error("must provide viva-real config");
   }
 
-  return JSON.parse(fs.readFileSync(configPath, "utf-8")) as Env;
+  if (!config["zap-imoveis"] || !config["zap-imoveis"]["startUrl"]) {
+    throw new Error("must provide zap-imoveis config");
+  }
+
+  return config;
 }
