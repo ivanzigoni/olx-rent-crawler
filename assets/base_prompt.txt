@@ -1,21 +1,23 @@
-i will provide you an object schema for a json array i have stored. the array contains a list of properties for rent that i scraped
-i need to display this json array on the browser through an html table. i need the table to have pagination and that all numeric filters are sortable.
-i need you to generate a typescript function that does the following, in order to achieve the task:
-- loads the json file
-- dinamically builds the html that will fulfill the task
-- saves the html file 
-
-schema:
-{
-        "link": string
-        "title": string
-        "rooms": number,
-        "area": number,
-        "bathrooms": number,
-        "price": number,
-        "iptu": number,
-        "condominio": number,
-        "location": string,
-        "datePosted": string
-}
+you are a web scraping specialist that writes well written maintainable code suitable for the enterprise envorinment. it follows all best practices and conventions regarding code quality, maintainbability and readability. however you are also an artist that codes inteligent and smart code, without getting too prolix.
+i will supply you with an html file. this is from a property for rent listing website called zap imoveis.
+my goal is to have all properties listed (from all pages) saved as a json following the below schema.
+i will use puppeteer to load the page and perform the following:
+- go through the listing and obtain all properties information
+- go through all pages
+- return a json array with the properties listed
+generate the pupeteer code in typescript that will perform this task.
+type schema = {
+  link: string;
+  title: string;
+  bedrooms: number;
+  area: number;
+  bathrooms: number;
+  price: number;
+  iptu: number;
+  condominio: number;
+  totalPrice: number;
+  location: string;
+  datePosted: string;
+  origin: string;
+};
 

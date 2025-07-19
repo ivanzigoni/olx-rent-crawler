@@ -35,8 +35,8 @@ function buildPrompt() {
 
   const html = clean(raw);
 
-  return `${basePrompt}`;
-  // return `${basePrompt}\nHTML:\n${html}`;
+  // return `${basePrompt}`;
+  return `${basePrompt}\nHTML:\n${html}`;
 }
 
 async function sendPrompt(message: string) {

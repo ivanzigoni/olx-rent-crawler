@@ -1,0 +1,183 @@
+```typescript
+import puppeteer from 'puppeteer';
+
+type Property = {
+  link: string;
+  title: string;
+  bedrooms: number;
+  area: number;
+  bathrooms: number;
+  price: number;
+  iptu: number;
+  condominio: number;
+  totalPrice: number;
+  location: string;
+  datePosted: string;
+  origin: string;
+};
+
+async function scrapeZapImoveis(url: string): Promise<Property[]> {
+  const browser = await puppeteer.launch({ headless: true });
+  const page = await browser.newPage();
+  const properties: Property[] = [];
+
+  try {
+    await page.goto(url, { waitUntil: 'networkidle0' });
+
+    while (true) {
+      // Wait for the property list container
+      await page.waitForSelector('li[data-cy="rp-property-cd"]', { timeout: 5000 });
+
+      // Extract properties on current page
+      const pageProperties = await page.$$eval('li[data-cy="rp-property-cd"] > a', (anchors) => {
+        return anchors.map(anchor => {
+          // Helper to parse price strings like "R$ 1.000" -> 1000
+          const parsePrice = (text: string): number => {
+            if (!text) return 0;
+            const num = text.replace(/\D/g, '');
+            return num ? parseInt(num) : 0;
+          };
+
+          // Link
+          const link = anchor.href;
+
+          // Title: concat main heading and subtitle (implict from location and street)
+          const titleElem = anchor.querySelector('h2[data-cy="rp-cardProperty-location-txt"]');
+          const subtitleElem = anchor.querySelector('p[data-cy="rp-cardProperty-street-txt"]');
+          const title = [
+            titleElem ? titleElem.textContent?.trim() ?? '' : '',
+            subtitleElem ? subtitleElem.textContent?.trim() ?? '' : ''
+          ].filter(Boolean).join(' - ');
+
+          // Location: from location h2 span text + city.
+          // The h2 contains a span with "…para alugar em", then location text
+          let locationText = '';
+          if (titleElem) {
+            // The lastChild text node in h2 is the location e.g. "Sagrada Família, Belo Horizonte"
+            const children = Array.from(titleElem.childNodes);
+            if (children.length > 1) {
+              const lastChild = children[children.length - 1];
+              locationText = lastChild.textContent?.trim() ?? '';
+            }
+          }
+
+          // Bedrooms: from bedroom quantity li [data-cy="rp-cardProperty-bedroomQuantity-txt"]
+          // This contains a number as text inside H3
+          let bedrooms = 0;
+          const bdElem = anchor.querySelector('li[data-cy="rp-cardProperty-bedroomQuantity-txt"] h3');
+          if (bdElem) {
+            const bdText = bdElem.textContent?.trim() ?? '';
+            const bdNum = parseInt(bdText.match(/\d+/)?.[0] ?? '0', 10);
+            bedrooms = isNaN(bdNum) ? 0 : bdNum;
+          }
+
+          // Bathrooms
+          let bathrooms = 0;
+          const baElem = anchor.querySelector('li[data-cy="rp-cardProperty-bathroomQuantity-txt"] h3');
+          if (baElem) {
+            const baText = baElem.textContent?.trim() ?? '';
+            const baNum = parseInt(baText.match(/\d+/)?.[0] ?? '0', 10);
+            bathrooms = isNaN(baNum) ? 0 : baNum;
+          }
+
+          // Area (property area)
+          let area = 0;
+          const areaElem = anchor.querySelector('li[data-cy="rp-cardProperty-propertyArea-txt"] h3');
+          if (areaElem) {
+            const areaText = areaElem.textContent ?? '';
+            // Extract number (sometimes ranges like "45-47 m²")
+            const areaMatch = areaText.match(/(\d+)(-\d+)?\s*m²/);
+            if (areaMatch) {
+              area = parseInt(areaMatch[1], 10);
+            }
+          }
+
+          // Price: main rental price e.g. "R$ 1.200"
+          let price = 0;
+          const priceElem = anchor.querySelector('div[data-cy="rp-cardProperty-price-txt"] p.text-2-25');
+          if (priceElem) {
+            // Remove "/mês" text in span then parse
+            const priceText = priceElem.textContent?.replace(/\/mês/i, '').trim() ?? '';
+            price = parsePrice(priceText);
+          }
+
+          // IPTU and Condomínio fees are in the smaller texts, we must parse condominio and iptu
+          // The "condominio" text usually starts with 'Cond. R$', and iptu with 'IPTU R$'
+          let iptu = 0;
+          let condominio = 0;
+          const feesElem = anchor.querySelector('div[data-cy="rp-cardProperty-price-txt"] p.text-1-75');
+          if (feesElem) {
+            const feesText = feesElem.textContent ?? '';
+            // Extract IPUT
+            const iptuMatch = feesText.match(/IPTU\s*R\$[\s]*([\d.,]+)/i);
+            if (iptuMatch) {
+              iptu = parsePrice(iptuMatch[1]);
+            }
+            // Extract Condominio
+            const condMatch = feesText.match(/Cond\.\s*R\$[\s]*([\d.,]+)/i);
+            if (condMatch) {
+              condominio = parsePrice(condMatch[1]);
+            }
+          }
+
+          // Total price: price + iptu + condominio (if applicable)
+          // However, some listings show totalPrice separately, if not, sum
+          // We will sum for consistent approach
+          const totalPrice = price + iptu + condominio;
+
+          // Date posted: no date info found in the listing snippet, set empty string
+          const datePosted = '';
+
+          // Origin: Website name
+          const origin = 'zapimoveis';
+
+          return {
+            link,
+            title,
+            bedrooms,
+            area,
+            bathrooms,
+            price,
+            iptu,
+            condominio,
+            totalPrice,
+            location: locationText,
+            datePosted,
+            origin,
+          };
+        });
+      });
+
+      properties.push(...pageProperties);
+
+      // Try to go to next page
+      const nextButtonEnabled = await page.$eval(
+        'nav[data-testid="l-pagination"] button[aria-label="Próxima página"]',
+        btn => !btn.hasAttribute('disabled')
+      ).catch(() => false);
+
+      if (!nextButtonEnabled) break;
+
+      // Click next page and wait for navigation & content
+      await Promise.all([
+        page.click('nav[data-testid="l-pagination"] button[aria-label="Próxima página"]'),
+        page.waitForNavigation({ waitUntil: 'networkidle0' })
+      ]);
+    }
+  } finally {
+    await browser.close();
+  }
+
+  return properties;
+}
+
+// Usage example:
+// (async () => {
+//   const url = 'https://www.zapimoveis.com.br/aluguel/apartamentos/mg+belo-horizonte+prado/';
+//   const listings = await scrapeZapImoveis(url);
+//   console.log(JSON.stringify(listings, null, 2));
+// })();
+
+export { scrapeZapImoveis, Property };
+```
+This script uses Puppeteer in TypeScript to load the page, extract all properties on the current page, then iterates through pagination until no next page is available. It parses and normalizes the required fields into the defined Property interface as requested. The script is generic for similar Zap Imoveis listing URLs for rent.

@@ -185,7 +185,7 @@ async function execute(browser?: Browser) {
     const allProperties = await scrapeAllProperties(url, b);
 
     fs.writeFileSync(
-      path.resolve(buffer_path, `$olx-${Date.now()}.json`),
+      path.resolve(buffer_path, `olx-${Date.now()}.json`),
       JSON.stringify(allProperties)
     );
   }

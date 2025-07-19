@@ -1,0 +1,244 @@
+import puppeteer from 'puppeteer';
+
+type Property = {
+  link: string;
+  title: string;
+  bedrooms: number;
+  area: number;
+  bathrooms: number;
+  price: number;
+  iptu: number;
+  condominio: number;
+  totalPrice: number;
+  location: string;
+  datePosted: string; // note: datePosted field not found in html, will set empty string
+  origin: string;
+};
+
+async function scrapeZapImoveisRentals(url: string): Promise<Property[]> {
+  const browser = await puppeteer.launch({headless:true});
+  const page = await browser.newPage();
+
+  await page.goto(url, {waitUntil: 'networkidle0'});
+
+  const properties: Property[] = [];
+
+  async function scrapeCurrentPage() {
+    // wait for properties container
+    await page.waitForSelector('li[data-cy="rp-property-cd"]');
+
+    // extract all properties data in this page
+    const props = await page.$$eval('li[data-cy="rp-property-cd"]', (listings) => {
+      function parsePrice(priceText: string): number {
+        if (!priceText) return 0;
+        const cleaned = priceText.replace(/[^\d,\.]/g, '').replace(/\./g, '').replace(',', '.');
+        const parsed = parseFloat(cleaned);
+        return isNaN(parsed) ? 0 : parsed;
+      }
+
+      return listings.map(item => {
+        // link
+        let linkElement = item.querySelector('a.block');
+        let link = linkElement?.getAttribute('href') ?? '';
+        if (link && !link.startsWith('http')) {
+          link = 'https://www.zapimoveis.com.br' + link;
+        }
+
+        // title - from h2[data-cy=rp-cardProperty-location-txt]
+        // The title contains a prefix like "Casa para alugar em " + location
+        const titleEl = item.querySelector('h2[data-cy="rp-cardProperty-location-txt"]');
+        let title = '';
+        let location = '';
+        if (titleEl) {
+          // the first child span block font-secondary text-1-5 font-regular text-neutral-110 mb-1 contains prefix like "Casa para alugar em "
+          // after it, the location span text is textContent, e.g. "Sagrada Família, Belo Horizonte"
+          // We want title to be that prefix removed + location, so let's build full title and location separate
+          const prefixSpan = titleEl.querySelector('span.block.font-secondary');
+          if (prefixSpan) {
+            // textContent of prefixSpan is like "Casa para alugar em "
+            // the rest textContent of h2 after prefixSpan is location
+            // The location is the nextSibling text or next element
+            // The last span after prefix might be empty
+            const prefixText = prefixSpan.textContent ?? '';
+            const locationTextNode = prefixSpan.nextSibling;
+            location = locationTextNode ? (locationTextNode.textContent ?? '').trim() : '';
+            title = prefixText.trim() + location;
+          } else {
+            title = titleEl.textContent ?? '';
+          }
+          title = title.trim();
+        }
+
+        // address / street (like Rua São Lázaro)
+        const streetEl = item.querySelector('p[data-cy="rp-cardProperty-street-txt"]');
+        let street = streetEl?.textContent?.trim() || '';
+
+        // The full location field in schema: suggestion to combine location + street or keep location only?
+        // The sample html shows location like "Sagrada Família, Belo Horizonte" and street like "Rua São Lázaro".
+        // It's better to have location = "Rua São Lázaro, Sagrada Família, Belo Horizonte"
+        let fullLocation = street && location? `${street}, ${location}` : location || street;
+
+        // bedrooms from li[data-cy="rp-cardProperty-bedroomQuantity-txt"] > h3
+        // This li contains a number, e.g. "1"
+        const bedroomEl = item.querySelector('li[data-cy="rp-cardProperty-bedroomQuantity-txt"] h3');
+        let bedrooms = 0;
+        if (bedroomEl) {
+          const text = bedroomEl.textContent?.trim() ?? '';
+          bedrooms = parseInt(text) || 0;
+        }
+
+        // bathrooms from li[data-cy="rp-cardProperty-bathroomQuantity-txt"] > h3
+        const bathroomEl = item.querySelector('li[data-cy="rp-cardProperty-bathroomQuantity-txt"] h3');
+        let bathrooms = 0;
+        if (bathroomEl) {
+          const text = bathroomEl.textContent?.trim() ?? '';
+          bathrooms = parseInt(text) || 0;
+        }
+
+        // area from li[data-cy="rp-cardProperty-propertyArea-txt"] > h3
+        // text like "60 m²" or "45-47 m²"
+        let area = 0;
+        const areaEl = item.querySelector('li[data-cy="rp-cardProperty-propertyArea-txt"] h3');
+        if (areaEl) {
+          let areaText = areaEl.textContent?.trim() ?? '';
+          // remove " m²", sometimes it's range e.g. "45-47 m²"
+          areaText = areaText.replace(' m²', '');
+          if (areaText.includes('-')) {
+            // pick the lower or average value of range
+            const parts = areaText.split('-').map(s => parseFloat(s));
+            if(parts.length === 2 && !isNaN(parts[0]) && !isNaN(parts[1])){
+              area = (parts[0] + parts[1]) / 2;
+            }
+          } else {
+            area = parseFloat(areaText) || 0;
+          }
+        }
+
+        // price in element p[data-cy="rp-cardProperty-price-txt"] > p.text-2-25 or the first p element with price
+        // The main price is p.text-2-25 text like "R$ 1.000/mês" or "R$ 1.050/mês"
+        let price = 0;
+        let iptu = 0;
+        let condominio = 0;
+        let totalPrice = 0;
+
+        const priceContainer = item.querySelector('div[data-cy="rp-cardProperty-price-txt"]');
+        if (priceContainer) {
+          // Extract main price
+          const priceMainEl = priceContainer.querySelector('p.text-2-25');
+          if (priceMainEl) {
+            let priceText = priceMainEl.textContent ?? '';
+            priceText = priceText.split('/')[0]; // remove /mês etc
+            price = parsePrice(priceText);
+          }
+
+          // extract IPTU and condominio from sibling p elements
+          const priceDetailsEls = priceContainer.querySelectorAll('p.text-1-75');
+          priceDetailsEls.forEach((p) => {
+            const text = p.textContent ?? '';
+            if (text.toLowerCase().includes('iptu')) {
+              // e.g. "IPTU R$ 85"
+              const iptuMatch = text.match(/R\$\s*([\d.]+)/i);
+              if (iptuMatch) {
+                iptu = parsePrice(iptuMatch[0]);
+              }
+            } else if (text.toLowerCase().includes('cond')) {
+              // e.g. "Cond. R$ 15"
+              const condoMatch = text.match(/R\$\s*([\d.]+)/i);
+              if (condoMatch) {
+                condominio = parsePrice(condoMatch[0]);
+              }
+            } else {
+              // Sometimes IPTU appears alone (saw sometimes "IPTU R$ 1.404" alone)
+              if (text.toLowerCase().startsWith('iptu')) {
+                const iptuMatch2 = text.match(/R\$\s*([\d.]+)/i);
+                if (iptuMatch2) {
+                  iptu = parsePrice(iptuMatch2[0]);
+                }
+              }
+            }
+          });
+        }
+        totalPrice = price + iptu + condominio;
+
+        // datePosted is not present in the sample HTML - leave empty string or null
+        let datePosted = '';
+
+        // origin - since these are all from zapimoveis, set fixed "zapimoveis"
+        const origin = "zapimoveis";
+
+        return {
+          link,
+          title,
+          bedrooms,
+          area,
+          bathrooms,
+          price,
+          iptu,
+          condominio,
+          totalPrice,
+          location: fullLocation,
+          datePosted,
+          origin,
+        };
+      });
+    });
+
+    properties.push(...props);
+  }
+
+  // function to click next page button, returns true if navigated, false if no more pages
+  async function nextPage(): Promise<boolean> {
+    const nextBtnSelector = 'button[data-testid="next-page"]';
+    const isDisabled = await page.$eval(nextBtnSelector, (btn) =>
+      btn.hasAttribute('disabled'),
+    ).catch(() => true);
+    if (isDisabled) {
+      return false;
+    } else {
+      await Promise.all([
+        page.click(nextBtnSelector),
+        page.waitForNavigation({ waitUntil: 'networkidle0' }),
+      ]);
+      return true;
+    }
+  }
+
+  // Start scraping
+  while (true) {
+    await scrapeCurrentPage();
+    const hasNext = await nextPage();
+    if (!hasNext) break;
+  }
+
+  await browser.close();
+
+  return properties;
+}
+
+// Example usage:
+ (async () => {
+   const properties = await scrapeZapImoveisRentals("https://www.zapimoveis.com.br/aluguel/imoveis/mg+belo-horizonte/prado/");
+   console.log(properties);
+ })();
+
+export { scrapeZapImoveisRentals, Property };
+
+This Puppeteer script does the following:
+- Launches a headless browser and navigates to the given listing page URL.
+- Iterates through all pagination pages:
+  - Waits for property cards to load.
+  - Extracts property data per the described schema:
+    - link: href of the property listing anchor.
+    - title: Extracted text from the location header (combining prefix and location).
+    - bedrooms: number from the bedrooms quantity.
+    - area: average or singular area number.
+    - bathrooms: number from bathroom quantity.
+    - price, iptu, condominio: parsed from respective texts.
+    - totalPrice: computed as sum of price, iptu and condominium fee.
+    - location: street + neighborhood.
+    - datePosted: left empty as not found in the HTML (adjust if available).
+    - origin: fixed string "zapimoveis".
+- Continues clicking the "next page" button until disabled (no more pages).
+- Returns array of all properties found.
+
+Note: Adjust the initial URL when calling the function to your starting listing page.
