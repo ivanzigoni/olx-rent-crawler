@@ -1,0 +1,14 @@
+{
+    "olx": {
+        "startUrl": [
+            "https://www.olx.com.br/imoveis/aluguel/estado-mg/belo-horizonte-e-regiao/zona-leste?ps=1000&pe=1700&sp=2&coe=500&ipe=500&ros=1&ros=2",
+            "https://www.olx.com.br/imoveis/aluguel/estado-mg/belo-horizonte-e-regiao/zona-centro-sul?ps=1000&pe=1700&sp=2&coe=500&ipe=500&ros=1&ros=2",
+            "https://www.olx.com.br/imoveis/aluguel/estado-mg/belo-horizonte-e-regiao/zona-noroeste/carlos-prates?ps=1000&pe=1700&sp=2&coe=500&ipe=500&ret=1020&ret=1040&ros=1&ros=2",
+            "https://www.olx.com.br/imoveis/aluguel/estado-mg/belo-horizonte-e-regiao/zona-oeste/prado?ps=1000&pe=1700&sp=2&coe=500&ipe=500&ret=1020&ret=1040&ros=1&ros=2",
+            "https://www.olx.com.br/imoveis/aluguel/estado-mg/belo-horizonte-e-regiao/zona-noroeste/padre-eustaquio?ps=1000&pe=1700&sp=2&coe=500&ipe=500&ret=1020&ret=1040&ros=1&ros=2"
+        ]
+    },
+    "viva-real": {
+        "startUrl": "https://www.vivareal.com.br/aluguel/minas-gerais/belo-horizonte/bairros/prado/apartamento_residencial/?onde=%2CMinas+Gerais%2CBelo+Horizonte%2CBairros%2CPrado%2C%2C%2Cneighborhood%2CBR%3EMinas+Gerais%3ENULL%3EBelo+Horizonte%3EBarrios%3EPrado%2C-19.922983%2C-43.960787%2C%3B%2CMinas+Gerais%2CBelo+Horizonte%2CBairros%2CSanta+Efig%C3%AAnia%2C%2C%2Cneighborhood%2CBR%3EMinas+Gerais%3ENULL%3EBelo+Horizonte%3EBarrios%3ESanta+Efigenia%2C-19.916704%2C-43.929334%2C%3B%2CMinas+Gerais%2CBelo+Horizonte%2CBairros%2CFloresta%2C%2C%2Cneighborhood%2CBR%3EMinas+Gerais%3ENULL%3EBelo+Horizonte%3EBarrios%3EFloresta%2C-19.916704%2C-43.929334%2C%3B%2CMinas+Gerais%2CBelo+Horizonte%2CBairros%2CCarlos+Prates%2C%2C%2Cneighborhood%2CBR%3EMinas+Gerais%3ENULL%3EBelo+Horizonte%3EBarrios%3ECarlos+Prates%2C-19.914795%2C-43.955177%2C%3B%2CMinas+Gerais%2CBelo+Horizonte%2CBairros%2CSagrada+Fam%C3%ADlia%2C%2C%2Cneighborhood%2CBR%3EMinas+Gerais%3ENULL%3EBelo+Horizonte%3EBarrios%3ESagrada+Familia%2C-19.898079%2C-43.917536%2C%3B%2CMinas+Gerais%2CBelo+Horizonte%2CBairros%2CHorto%2C%2C%2Cneighborhood%2CBR%3EMinas+Gerais%3ENULL%3EBelo+Horizonte%3EBarrios%3EHorto%2C-19.919052%2C-43.938669%2C%3B%2CMinas+Gerais%2CBelo+Horizonte%2CBairros%2CBarro+Preto%2C%2C%2Cneighborhood%2CBR%3EMinas+Gerais%3ENULL%3EBelo+Horizonte%3EBarrios%3EBarro+Preto%2C-19.923309%2C-43.953608%2C%3B%2CMinas+Gerais%2CBelo+Horizonte%2CBairros%2CSanta+Tereza%2C%2C%2Cneighborhood%2CBR%3EMinas+Gerais%3ENULL%3EBelo+Horizonte%3EBarrios%3ESanta+Tereza%2C-19.919168%2C-43.938656%2C&tipos=apartamento_residencial%2Ccasa_residencial%2Cedificio-residencial_comercial&quartos=1%2C2&precoMinimo=1000&precoMaximo=1700&transacao=aluguel"
+    }
+}
