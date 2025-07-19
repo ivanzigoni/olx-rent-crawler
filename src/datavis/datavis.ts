@@ -17,8 +17,6 @@ type Input = {
 }
 
 function loadBuffer(baseBufferPath: string) {
-    // const baseBufferPath = path.resolve(process.cwd(), "buffer");
-
     const result: Input[] = [];
 
     for (const pathName of fs.readdirSync(baseBufferPath)) {
