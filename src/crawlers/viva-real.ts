@@ -105,7 +105,7 @@ async function scrapeAllProperties(initialURL) {
                         properties.push({
                             title,
                             link: href,
-                            street: streetName,
+                            location: streetName,
                             area: details.area ? Number(details.area.replace(/\D/g, '')) : 0,
                             bedrooms: details.bedrooms ? Number(details.bedrooms.replace(/\D/g, '')) : 0,
                             bathrooms: details.bathrooms ? Number(details.bathrooms.replace(/\D/g, '')) : 0,
@@ -113,6 +113,7 @@ async function scrapeAllProperties(initialURL) {
                             price: price ? Number(price.replace(/\D/g, '')) : 0,
                             condominio: condominium ? Number(condominium.replace(/\D/g, '')) : 0,
                             iptu: iptu ? Number(iptu.replace(/\D/g, '')) : 0,
+                            datePosted: "N/A"
                         });
                     } catch (ex) {
                         // Catch any errors per item to not fail the entire extraction

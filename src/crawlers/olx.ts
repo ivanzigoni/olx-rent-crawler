@@ -78,7 +78,7 @@ async function scrapeAllProperties(url: string, browser: Browser) {
         return {
           link,
           title,
-          rooms: rooms ? Number(rooms) : 0,
+          bedrooms: rooms ? Number(rooms) : 0,
           area: area ? Number(area) : 0,
           bathrooms: bathrooms ? Number(bathrooms) : 0,
           price: priceText ? Number(priceText) : 0,
@@ -170,7 +170,6 @@ async function scrapeAllProperties(url: string, browser: Browser) {
   fs.mkdirSync(buffer_path)
 
   const browser = await puppeteer.launch({headless:false});
-
 
   for (const url of urls) {
 

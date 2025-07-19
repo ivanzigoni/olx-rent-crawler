@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Properties for Rent</title>
+<style>
+  body { font-family: Arial, sans-serif; padding: 20px; }
+  table { border-collapse: collapse; width: 100%; }
+  th, td { border: 1px solid #ddd; padding: 8px; }
+  th { cursor: pointer; background-color: #f2f2f2; user-select: none; }
+  th.sortable:hover { background-color: #ddd; }
+  th.asc::after { content: " ▲"; }
+  th.desc::after { content: " ▼"; }
+  a { color: blue; text-decoration: underline; }
+  .pagination { margin-top: 10px; }
+  .pagination button { padding: 6px 12px; margin-right: 4px; }
+</style>
+</head>
+<body>
+
+<h2>Properties for Rent</h2>
+
+<table id="propertiesTable">
+  <thead>
+    <tr>
+      <th>Link</th><th>Title</th><th class="sortable" data-key="bedrooms">Rooms</th><th class="sortable" data-key="area">Area (m²)</th><th class="sortable" data-key="bathrooms">Bathrooms</th><th class="sortable" data-key="price">Price</th><th class="sortable" data-key="iptu">IPTU</th><th class="sortable" data-key="condominio">Condominio</th><th>Location</th><th>Date Posted</th>
+    </tr>
+  </thead>
+  <tbody id="tableBody">
+    <!-- Rows rendered by JS -->
+  </tbody>
+</table>
+
+<div class="pagination" id="paginationControls"></div>
+
+<script>
+  // Data from TypeScript variable injection:
+  const data = [{"link":"https://mg.olx.com.br/belo-horizonte-e-regiao/imoveis/kitnet-conjugado-padre-eustaquio-bh-r-1-290-00-1420426477","title":"Kitnet / Conjugado Padre Eustáquio - BH R$ 1.290,00","bedrooms":1,"area":35,"bathrooms":1,"price":1290,"oldPrice":0,"iptu":0,"condominio":150,"location":"Belo Horizonte, Padre Eustáquio","datePosted":"16 de jul, 09:10"},{"link":"https://mg.olx.com.br/belo-horizonte-e-regiao/imoveis/barracao-novinho-em-santa-tereza-1-quarto-2-banheiros-rua-grafito-1405363982","title":"Barracão novinho em Santa Tereza - 1 quarto, 2 banheiros, rua Grafito","bedrooms":1,"area":38,"bathrooms":2,"price":1600,"oldPrice":0,"iptu":62,"condominio":0,"location":"Belo Horizonte, Santa Tereza","datePosted":"20 de mai, 12:13"},{"title":"Casa para alugar em Santa Tereza, Belo Horizonte","link":"https://www.vivareal.com.br/imovel/casa-1-quartos-santa-tereza-belo-horizonte-38m2-aluguel-RS1600-id-2807621617/?source=ranking%2Crp","location":"Rua Grafito","area":38,"bedrooms":1,"bathrooms":2,"parking":0,"price":1600,"condominio":0,"iptu":62,"datePosted":"N/A"},{"title":"Casa de Vila para alugar em Santa Tereza, Belo Horizonte","link":"https://www.vivareal.com.br/imovel/casa-2-quartos-santa-tereza-belo-horizonte-40m2-aluguel-RS1250-id-2819548216/?source=ranking%2Crp","location":"Rua Capitão Bragança","area":40,"bedrooms":2,"bathrooms":1,"parking":0,"price":1250,"condominio":0,"iptu":50,"datePosted":"N/A"},{"link":"https://mg.olx.com.br/belo-horizonte-e-regiao/imoveis/apartamento-com-2-quartos-para-alugar-em-belo-horizonte-1419970551","title":"Apartamento com 2 quartos para alugar em Belo Horizonte","bedrooms":2,"area":42,"bathrooms":1,"price":1500,"oldPrice":0,"iptu":40,"condominio":30,"location":"Belo Horizonte, Sagrada Família","datePosted":"14 de jul, 21:17"},{"title":"Apartamento para alugar em Sagrada Família, Belo Horizonte","link":"https://www.vivareal.com.br/imovel/apartamento-2-quartos-sagrada-familia-belo-horizonte-42m2-aluguel-RS1500-id-2821146716/?source=ranking%2Crp","location":"Rua Genoveva de Souza","area":42,"bedrooms":2,"bathrooms":1,"parking":0,"price":1500,"condominio":30,"iptu":40,"datePosted":"N/A"},{"link":"https://mg.olx.com.br/belo-horizonte-e-regiao/imoveis/kitinet-para-alugar-no-prado-1418835265","title":"Kitinet para alugar no Prado","bedrooms":1,"area":45,"bathrooms":1,"price":1200,"oldPrice":0,"iptu":44,"condominio":175,"location":"Belo Horizonte, Prado","datePosted":"10 de jul, 12:02"},{"link":"https://mg.olx.com.br/belo-horizonte-e-regiao/imoveis/casa-entrada-individual-02-quartos-sala-cozinha-1416987015","title":"CASA ENTRADA INDIVIDUAL 02 QUARTOS, SALA, COZINHA","bedrooms":2,"area":45,"bathrooms":1,"price":1350,"oldPrice":0,"iptu":55,"condominio":0,"location":"Belo Horizonte, Vera Cruz","datePosted":"3 de jul, 15:54"},{"link":"https://mg.olx.com.br/belo-horizonte-e-regiao/imoveis/imovel-para-aluguel-possui-45-metros-quadrados-com-2-quartos-em-santa-tereza-belo-horizo-1386335090","title":"Imóvel para aluguel possui 45 metros quadrados com 2 quartos em Santa Tereza - Belo Horizo","bedrooms":2,"area":45,"bathrooms":1,"price":1450,"oldPrice":0,"iptu":80,"condominio":0,"location":"Belo Horizonte, Santa Tereza","datePosted":"13 de mar, 20:02"},{"link":"https://mg.olx.com.br/belo-horizonte-e-regiao/imoveis/locacao-apartamento-2-quartos-paraiso-belo-horizonte-1394629352","title":"Locação Apartamento 2 quartos Paraíso Belo Horizonte","bedrooms":2,"area":45,"bathrooms":1,"price":1460,"oldPrice":null,"iptu":46,"condominio":100,"location":"Belo Horizonte, Paraíso","datePosted":"11 de abr, 08:22"},{"link":"https://mg.olx.com.br/belo-horizonte-e-regiao/imoveis/barracao-para-alugar-no-santa-ines-de-2-quarto-sala-cozinha-copa-bem-espacosa-com-pequen-1412974871","title":"Barracão para alugar no Santa Inês de 2 quarto, sala, cozinha/copa bem espaçosa com pequen","bedrooms":2,"area":45,"bathrooms":1,"price":1600,"oldPrice":0,"iptu":56,"condominio":0,"location":"Belo Horizonte, Santa Inês","datePosted":"17 de jun, 06:34"},{"title":"Casa para alugar em Santa Tereza, Belo Horizonte","link":"https://www.vivareal.com.br/imovel/casa-2-quartos-santa-tereza-belo-horizonte-45m2-aluguel-RS1450-id-2786894170/?source=ranking%2Crp","location":"Rua Capitão Bragança","area":45,"bedrooms":2,"bathrooms":1,"parking":0,"price":1450,"condominio":0,"iptu":80,"datePosted":"N/A"},{"title":"Kitnet/Conjugado para alugar em Prado, Belo Horizonte","link":"https://www.vivareal.com.br/imovel/kitnet-1-quartos-prado-belo-horizonte-45m2-aluguel-RS1200-id-2820237771/?source=ranking%2Crp","location":"Rua Ituiutaba","area":45,"bedrooms":1,"bathrooms":1,"parking":0,"price":1200,"condominio":175,"iptu":44,"datePosted":"N/A"},{"title":"Casa para alugar em Floresta, Belo Horizonte","link":"https://www.vivareal.com.br/imovel/casa-1-quartos-floresta-belo-horizonte-45m2-aluguel-RS1300-id-2820162936/?source=ranking%2Crp","location":"","area":45,"bedrooms":1,"bathrooms":1,"parking":0,"price":1300,"condominio":0,"iptu":60,"datePosted":"N/A"},{"link":"https://mg.olx.com.br/belo-horizonte-e-regiao/imoveis/alugo-casa-2-quartos-mobiliada-bairro-nova-vista-15min-do-centro-1415765635","title":"Alugo casa 2 quartos mobiliada Bairro Nova Vista 15min do centro","bedrooms":2,"area":50,"bathrooms":1,"price":1350,"oldPrice":null,"iptu":0,"condominio":0,"location":"Belo Horizonte, Nova Vista","datePosted":"29 de jun, 07:58"},{"link":"https://mg.olx.com.br/belo-horizonte-e-regiao/imoveis/barracao-para-aluguel-1-quarto-padre-eustaquio-belo-horizonte-mg-1412957509","title":"BARRACÃO para aluguel, 1 quarto, PADRE EUSTÁQUIO - Belo Horizonte/MG","bedrooms":1,"area":55,"bathrooms":1,"price":1350,"oldPrice":0,"iptu":82,"condominio":0,"location":"Belo Horizonte, Padre Eustáquio","datePosted":"17 de jun, 05:16"},{"link":"https://mg.olx.com.br/belo-horizonte-e-regiao/imoveis/casa-de-fundos-confortavel-e-de-um-quarto-casa-1417712272","title":"Casa de Fundos confortável e de um quarto Casa ","bedrooms":1,"area":55,"bathrooms":1,"price":1500,"oldPrice":0,"iptu":100,"condominio":100,"location":"Belo Horizonte, São Lucas","datePosted":"Ontem, 20:45"},{"title":"Casa para alugar em Santa Tereza, Belo Horizonte","link":"https://www.vivareal.com.br/imovel/casa-1-quartos-santa-tereza-belo-horizonte-55m2-aluguel-RS1550-id-2821910825/?source=ranking%2Crp","location":"","area":55,"bedrooms":1,"bathrooms":1,"parking":0,"price":1550,"condominio":0,"iptu":0,"datePosted":"N/A"},{"link":"https://mg.olx.com.br/belo-horizonte-e-regiao/imoveis/apartamento-com-2-quartos-para-aluguel-60m-monsenhor-messias-1416854068","title":"Apartamento com 2 quartos para aluguel, 60m² - Monsenhor Messias","bedrooms":2,"area":60,"bathrooms":1,"price":1200,"oldPrice":0,"iptu":47,"condominio":70,"location":"Belo Horizonte, Padre Eustáquio","datePosted":"3 de jul, 07:17"},{"link":"https://mg.olx.com.br/belo-horizonte-e-regiao/imoveis/locacao-area-privativa-padre-eustaquio-belo-horizonte-1389733010","title":"Locação Área Privativa Padre Eustáquio Belo Horizonte","bedrooms":1,"area":60,"bathrooms":1,"price":1500,"oldPrice":0,"iptu":84,"condominio":0,"location":"Belo Horizonte, Padre Eustáquio","datePosted":"26 de mar, 00:13"},{"link":"https://mg.olx.com.br/belo-horizonte-e-regiao/imoveis/casa-para-aluguel-2-quartos-1-vaga-padre-eustaquio-belo-horizonte-mg-1415325009","title":"Casa para aluguel, 2 quartos, 1 vaga, Padre Eustáquio - Belo Horizonte/MG","bedrooms":2,"area":60,"bathrooms":1,"price":1600,"oldPrice":0,"iptu":86,"condominio":0,"location":"Belo Horizonte, Padre Eustáquio","datePosted":"27 de jun, 08:56"},{"link":"https://mg.olx.com.br/belo-horizonte-e-regiao/imoveis/centro-2-quartos-1374004769","title":"Centro 2 quartos","bedrooms":2,"area":60,"bathrooms":2,"price":1100,"oldPrice":null,"iptu":80,"condominio":440,"location":"Belo Horizonte, Centro","datePosted":"13 de jun, 14:46"},{"link":"https://mg.olx.com.br/belo-horizonte-e-regiao/imoveis/barracao-para-aluguel-2-quartos-cruzeiro-belo-horizonte-mg-1420702442","title":"Barracão para aluguel, 2 quartos, Cruzeiro - Belo Horizonte/MG","bedrooms":2,"area":60,"bathrooms":1,"price":1300,"oldPrice":0,"iptu":68,"condominio":0,"location":"Belo Horizonte, Cruzeiro","datePosted":"17 de jul, 01:32"},{"link":"https://mg.olx.com.br/belo-horizonte-e-regiao/imoveis/apartamento-dois-quartos-1420879028","title":"apartamento dois quartos","bedrooms":2,"area":60,"bathrooms":1,"price":1390,"oldPrice":0,"iptu":0,"condominio":0,"location":"Belo Horizonte, São Geraldo","datePosted":"17 de jul, 14:09"},{"link":"https://mg.olx.com.br/belo-horizonte-e-regiao/imoveis/casa-para-aluguel-1-quarto-sagrada-familia-belo-horizonte-mg-1420429691","title":"Casa para aluguel, 1 quarto, Sagrada Família - Belo Horizonte/MG","bedrooms":1,"area":60,"bathrooms":1,"price":1600,"oldPrice":0,"iptu":64,"condominio":0,"location":"Belo Horizonte, Sagrada Família","datePosted":"16 de jul, 09:22"},{"link":"https://mg.olx.com.br/belo-horizonte-e-regiao/imoveis/para-aluguel-casa-sao-geraldo-1388165481","title":"para aluguel Casa São Geraldo","bedrooms":2,"area":60,"bathrooms":1,"price":1600,"oldPrice":0,"iptu":67,"condominio":0,"location":"Belo Horizonte, São Geraldo","datePosted":"20 de mar, 12:39"},{"title":"Casa para alugar em Sagrada Família, Belo Horizonte","link":"https://www.vivareal.com.br/imovel/casa-1-quartos-sagrada-familia-belo-horizonte-60m2-aluguel-RS1600-id-2821557630/?source=ranking%2Crp","location":"Rua Genoveva de Souza","area":60,"bedrooms":1,"bathrooms":1,"parking":0,"price":1600,"condominio":0,"iptu":64,"datePosted":"N/A"},{"link":"https://mg.olx.com.br/belo-horizonte-e-regiao/imoveis/casa-1-quarto-carlos-prates-r-1-290-00-1395980367","title":"Casa 1 quarto Carlos Prates - R$ 1.290,00","bedrooms":1,"area":65,"bathrooms":1,"price":1290,"oldPrice":null,"iptu":0,"condominio":150,"location":"Belo Horizonte, Carlos Prates","datePosted":"16 de abr, 03:03"},{"link":"https://mg.olx.com.br/belo-horizonte-e-regiao/imoveis/casa-de-fundos-1-quarto-prox-av-getulio-vargas-1387394877","title":"Casa de fundos 1 quarto, próx. Av. Getúlio Vargas","bedrooms":1,"area":65,"bathrooms":1,"price":1300,"oldPrice":0,"iptu":100,"condominio":0,"location":"Belo Horizonte, São Lucas","datePosted":"7 de jul, 01:36"},{"link":"https://mg.olx.com.br/belo-horizonte-e-regiao/imoveis/imovel-para-aluguel-com-2-quartos-em-boa-vista-belo-horizonte-mg-1378566398","title":"Imóvel para aluguel com 2 quartos em Boa Vista - Belo Horizonte - MG","bedrooms":2,"area":65,"bathrooms":1,"price":1400,"oldPrice":0,"iptu":80,"condominio":0,"location":"Belo Horizonte, Boa Vista","datePosted":"13 de fev, 14:57"},{"title":"Casa para alugar em Carlos Prates, Belo Horizonte","link":"https://www.vivareal.com.br/imovel/casa-1-quartos-carlos-prates-belo-horizonte-65m2-aluguel-RS1290-id-2797918927/?source=ranking%2Crp","location":"","area":65,"bedrooms":1,"bathrooms":1,"parking":0,"price":1290,"condominio":150,"iptu":0,"datePosted":"N/A"},{"title":"Casa para alugar em Santa Efigênia, Belo Horizonte","link":"https://www.vivareal.com.br/imovel/casa-1-quartos-santa-efigenia-belo-horizonte-66m2-aluguel-RS1300-id-2820548628/?source=ranking%2Crp","location":"Rua Resedá","area":66,"bedrooms":1,"bathrooms":1,"parking":0,"price":1300,"condominio":0,"iptu":0,"datePosted":"N/A"},{"link":"https://mg.olx.com.br/belo-horizonte-e-regiao/imoveis/locacao-apartamento-1-quarto-barro-preto-belo-horizonte-1412928517","title":"Locação Apartamento 1 quarto Barro Preto Belo Horizonte","bedrooms":1,"area":70,"bathrooms":1,"price":1200,"oldPrice":0,"iptu":181,"condominio":100,"location":"Belo Horizonte, Barro Preto","datePosted":"16 de jun, 23:24"},{"title":"Apartamento para alugar em Barro Preto, Belo Horizonte","link":"https://www.vivareal.com.br/imovel/apartamento-1-quartos-barro-preto-belo-horizonte-70m2-aluguel-RS1200-id-2814630042/?source=ranking%2Crp","location":"Rua Mato Grosso","area":70,"bedrooms":1,"bathrooms":1,"parking":0,"price":1200,"condominio":100,"iptu":181,"datePosted":"N/A"},{"link":"https://mg.olx.com.br/belo-horizonte-e-regiao/imoveis/locacao-casa-padre-eustaquio-belo-horizonte-1417106941","title":"Locação Casa Padre Eustáquio Belo Horizonte","bedrooms":2,"area":75,"bathrooms":1,"price":1250,"oldPrice":0,"iptu":122,"condominio":0,"location":"Belo Horizonte, Padre Eustáquio","datePosted":"4 de jul, 01:13"},{"link":"https://mg.olx.com.br/belo-horizonte-e-regiao/imoveis/imovel-para-aluguel-tem-75-metros-quadrados-com-2-quartos-em-esplanada-belo-horizonte-1325898009","title":"Imóvel para aluguel tem 75 metros quadrados com 2 quartos em Esplanada - Belo Horizonte - ","bedrooms":2,"area":75,"bathrooms":1,"price":1600,"oldPrice":0,"iptu":49,"condominio":0,"location":"Belo Horizonte, Esplanada","datePosted":"2 de ago, 16:05"},{"link":"https://mg.olx.com.br/belo-horizonte-e-regiao/imoveis/aluguel-casa-boa-vista-belo-horizonte-mg-1418318564","title":"Aluguel - CASA - BOA VISTA Belo Horizonte MG","bedrooms":1,"area":108,"bathrooms":1,"price":1300,"oldPrice":0,"iptu":72,"condominio":0,"location":"Belo Horizonte, Boa Vista","datePosted":"8 de jul, 17:09"}];
+  const rowsPerPage = 15;
+
+  let currentPage = 1;
+  let sortKey = null;
+  let sortOrderAsc = true;
+
+  // Render table rows for the current page and sort order
+  function renderTable() {
+    let sortedData = [...data];
+    if (sortKey) {
+      sortedData.sort((a, b) => {
+        const valA = a[sortKey];
+        const valB = b[sortKey];
+        if (typeof valA === 'number' && typeof valB === 'number') {
+          return sortOrderAsc ? valA - valB : valB - valA;
+        }
+        // fallback no sorting for non-number (should not be here since only numeric sortable)
+        return 0;
+      });
+    }
+
+    const start = (currentPage - 1) * rowsPerPage;
+    const end = start + rowsPerPage;
+    const pageData = sortedData.slice(start, end);
+
+    const tbody = document.getElementById('tableBody');
+    tbody.innerHTML = pageData
+      .map((item) => `
+        <tr>
+          <td><a href="${item.link}" target="_blank" rel="noopener noreferrer">Link</a></td>
+          <td>${item.title}</td>
+          <td>${item.bedrooms}</td>
+          <td>${item.area}</td>
+          <td>${item.bathrooms}</td>
+          <td>${item.price.toLocaleString('en-US', { style: 'currency', currency: 'USD' })}</td>
+          <td>${item.iptu.toLocaleString('en-US', { style: 'currency', currency: 'USD' })}</td>
+          <td>${item.condominio.toLocaleString('en-US', { style: 'currency', currency: 'USD' })}</td>
+          <td>${item.location}</td>
+          <td>${item.datePosted}</td>
+        </tr>`).join('');
+    
+    renderPagination(sortedData.length);
+    updateSortIndicators();
+  }
+
+  // Render pagination buttons
+  function renderPagination(totalItems) {
+    const totalPages = Math.ceil(totalItems / rowsPerPage);
+    const container = document.getElementById('paginationControls');
+    container.innerHTML = '';
+
+    if (totalPages <= 1) return;
+
+    // Previous button
+    const prevBtn = document.createElement('button');
+    prevBtn.textContent = 'Prev';
+    prevBtn.disabled = currentPage === 1;
+    prevBtn.onclick = () => { if(currentPage > 1) { currentPage--; renderTable(); } };
+    container.appendChild(prevBtn);
+
+    // Numbered buttons (limit to 7 pages for big dataset)
+    let startPage = Math.max(1, currentPage - 3);
+    let endPage = Math.min(totalPages, currentPage + 3);
+
+    for (let i = startPage; i <= endPage; i++) {
+      const btn = document.createElement('button');
+      btn.textContent = i.toString();
+      if (i === currentPage) btn.disabled = true;
+      btn.onclick = () => { currentPage = i; renderTable(); };
+      container.appendChild(btn);
+    }
+
+    // Next button
+    const nextBtn = document.createElement('button');
+    nextBtn.textContent = 'Next';
+    nextBtn.disabled = currentPage === totalPages;
+    nextBtn.onclick = () => { if(currentPage < totalPages) { currentPage++; renderTable(); } };
+    container.appendChild(nextBtn);
+  }
+
+  // Update arrow indicators on headers
+  function updateSortIndicators() {
+    const headers = document.querySelectorAll('th.sortable');
+    headers.forEach((th) => {
+      th.classList.remove('asc', 'desc');
+      if (th.dataset.key === sortKey) {
+        th.classList.add(sortOrderAsc ? 'asc' : 'desc');
+      }
+    });
+  }
+
+  // Sort on header click
+  document.querySelectorAll('th.sortable').forEach(th => {
+    th.addEventListener('click', () => {
+      const clickedKey = th.dataset.key;
+      if (sortKey === clickedKey) {
+        sortOrderAsc = !sortOrderAsc;
+      } else {
+        sortKey = clickedKey;
+        sortOrderAsc = true;
+      }
+      currentPage = 1;
+      renderTable();
+    });
+  });
+
+  // Initial render
+  renderTable();
+
+</script>
+
+</body>
+</html>

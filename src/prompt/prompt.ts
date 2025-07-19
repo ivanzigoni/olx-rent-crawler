@@ -23,13 +23,14 @@ function clean(html: string) {
 }
 
 function buildPrompt() {
-    const raw = fs.readFileSync(path.resolve(process.cwd(), "assets", "cheerio_sample.html"), "utf-8");
+    const raw = fs.readFileSync(path.resolve(process.cwd(), "assets", "sample.html"), "utf-8");
     
-    const basePrompt = fs.readFileSync(path.resolve(process.cwd(), "assets", "cheerio_prompt.txt"), "utf-8");
+    const basePrompt = fs.readFileSync(path.resolve(process.cwd(), "assets", "base_prompt.txt"), "utf-8");
 
     const html = clean(raw);
 
-    return `${basePrompt}\nHTML:\n${html}`;
+    return `${basePrompt}`;
+    // return `${basePrompt}\nHTML:\n${html}`;
 }
 
 async function sendPrompt(message: string) {

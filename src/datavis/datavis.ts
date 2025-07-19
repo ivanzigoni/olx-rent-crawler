@@ -1,10 +1,11 @@
 import path from "node:path";
 import fs from "node:fs";
+import { generatePropertiesHtml } from "./table";
 
 type Input = {
     "link": string,
     "title": string,
-    "rooms": number,
+    "bedrooms": number,
     "area": number,
     "bathrooms": number,
     "price": number,
@@ -36,11 +37,6 @@ function loadBuffer(baseBufferPath: string) {
     return result;
 }
 
-// const filtered = fs.readdirSync(path.resolve(process.cwd(), "buffer"))
-// .reduce((acc, p) => {
-//     acc = [...acc, ...JSON.parse(fs.readFileSync(path.resolve(process.cwd(), "buffer", p), "utf-8"))];
-//     return acc;
-// }, [] as Input[])
 const filtered = loadBuffer(path.resolve(process.cwd(), "buffer"))
 .filter((property: Input) => {
     const sum = Number(property.price ?? 0) + Number(property.iptu ?? 0) + Number(property.condominio ?? 0);
@@ -58,4 +54,12 @@ const clean = Object.values(filtered.reduce((acc, el) => {
 }, {} as { [key: string]: Input }))
 .sort((a,b) => a.area - b.area)
 
-fs.writeFileSync(path.resolve(process.cwd(), "output", `result-${Date.now()}.json`), JSON.stringify(clean));
+const resultName = `result-${Date.now()}`;
+
+fs.writeFileSync(path.resolve(process.cwd(), "output", `${resultName}.json`), JSON.stringify(clean));
+
+generatePropertiesHtml(
+    path.resolve(process.cwd(), "output", `${resultName}.json`), 
+    path.resolve(process.cwd(), "output", `${resultName}.html`), 
+    15
+);
