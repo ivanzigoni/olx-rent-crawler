@@ -11,6 +11,9 @@ export type Env = {
   "zap-imoveis": {
     startUrl: string;
   };
+  netimoveis: {
+    startUrl: string[];
+  };
 };
 
 export function getConfig() {
@@ -36,6 +39,10 @@ export function getConfig() {
 
   if (!config["zap-imoveis"] || !config["zap-imoveis"]["startUrl"]) {
     throw new Error("must provide zap-imoveis config");
+  }
+
+  if (!config["netimoveis"] || !config["netimoveis"]["startUrl"]) {
+    throw new Error("must provide netimoveis config");
   }
 
   return config;

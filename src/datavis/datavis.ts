@@ -55,6 +55,7 @@ function loadBuffer(baseBufferPath: string) {
 const output = removeDuplicates<Input>(
   loadBuffer(path.resolve(process.cwd(), "buffer")).filter(
     (property: Input) => {
+      console.log(property.origin);
       return (
         property.totalPrice &&
         property.totalPrice <= 1700 &&

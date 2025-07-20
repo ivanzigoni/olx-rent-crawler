@@ -11,7 +11,7 @@ async function scrapeAllProperties(initialURL: string, browser: Browser) {
 
   const results: any[] = [];
 
-  await page.goto(initialURL);
+  await page.goto(initialURL, { waitUntil: "domcontentloaded" });
 
   try {
     while (true) {
@@ -173,7 +173,12 @@ async function execute(browser?: Browser) {
 
   fs.mkdirSync(buffer_path);
 
-  const b = browser ?? (await puppeteer.launch({ headless: false }));
+  const b =
+    browser ??
+    (await puppeteer.launch({
+      headless: false,
+      args: ["--disable-features=site-per-process"],
+    }));
 
   const allProperties = await scrapeAllProperties(url, b);
 

@@ -1,0 +1,132 @@
+```typescript
+import { parse } from "node-html-parser";
+
+type Property = {
+  link: string;
+  title: string;
+  bedrooms: number;
+  area: number;
+  bathrooms: number;
+  price: number;
+  iptu: number;
+  condominio: number;
+  totalPrice: number;
+  location: string;
+  datePosted: string;
+  origin: string;
+};
+
+function extractNumberFromBrazilianCurrency(text: string): number {
+  // Example input: "R$ 1.500,00"
+  // Remove currency symbol, replace "." by nothing, "," by "." then parse float
+  if (!text) return 0;
+  const cleaned = text.replace(/[^\d,.-]/g, "").replace(/\./g, "").replace(",", ".");
+  const n = parseFloat(cleaned);
+  return isNaN(n) ? 0 : n;
+}
+
+function extractNumberFromText(text: string): number {
+  if (!text) return 0;
+  const m = text.match(/([\d.,]+)/);
+  if (!m) return 0;
+  // Replace possible ".", "," depending on context
+  let numberStr = m[1];
+  // Consider comma as decimal separator (Brazilian format)
+  if (numberStr.indexOf(",") > -1 && numberStr.indexOf(".") === -1) {
+    numberStr = numberStr.replace(",", ".");
+  } else {
+    // remove all commas
+    numberStr = numberStr.replace(/,/g, "");
+  }
+  const n = parseFloat(numberStr);
+  return isNaN(n) ? 0 : n;
+}
+
+/**
+ * Main function to extract property data from the supplied HTML
+ * @param html string (the full HTML content of the detail page)
+ * @param link string (the URL of the detail page)
+ * @returns Property object according to schema
+ */
+export function parsePropertyDetail(html: string, link: string): Property {
+  const root = parse(html);
+
+  // defaults
+  const property: Property = {
+    link,
+    title: "",
+    bedrooms: 0,
+    area: 0,
+    bathrooms: 0,
+    price: 0,
+    iptu: 0,
+    condominio: 0,
+    totalPrice: 0,
+    location: "",
+    datePosted: "",
+    origin: "",
+  };
+
+  // title: first h1 with id="titulo"
+  const titleEl = root.querySelector("h1#titulo");
+  if (titleEl) {
+    // The h1 text contains extra line breaks, just get normalized text
+    property.title = titleEl.text.trim().replace(/\s+/g, " ");
+  }
+
+  // location: div text-gray inside section mb-3 section-title
+  // From example: <div class="mb-1 text-gray">Rua Itanhandu, Carlos Prates – Belo Horizonte</div>
+  const locationEl = root.querySelector("section.section-title > div.text-gray");
+  if (locationEl) {
+    property.location = locationEl.text.trim();
+  }
+
+  // price, iptu, condominio from section.details.prices div.detail where detail-name contains key
+  const detailElements = root.querySelectorAll("section.details.prices div.detail");
+  detailElements.forEach((detail) => {
+    const name = detail.querySelector(".detail-name")?.text.trim().toLowerCase() ?? "";
+    const value = detail.querySelector(".detail-value")?.text.trim() ?? "";
+    if (name.includes("valor de locação")) {
+      property.price = extractNumberFromBrazilianCurrency(value);
+    } else if (name.includes("condomínio")) {
+      property.condominio = extractNumberFromBrazilianCurrency(value);
+    } else if (name.includes("iptu")) {
+      property.iptu = extractNumberFromBrazilianCurrency(value);
+    }
+  });
+
+  // totalPrice: price + iptu + condominio
+  property.totalPrice = property.price + property.iptu + property.condominio;
+
+  // features: bedrooms, area, bathrooms from section.details.features.arealote div.detail
+  // We look for specific detail-value containing "quartos", "banheiros", "m²"
+  const features = root.querySelectorAll("section.details.features.arealote div.detail");
+  features.forEach((feature) => {
+    const valEl = feature.querySelector(".detail-value");
+    if (!valEl) return;
+    const textVal = valEl.text.trim().toLowerCase();
+
+    // bedrooms: look for "quartos"
+    if (textVal.includes("quartos")) {
+      property.bedrooms = extractNumberFromText(textVal);
+    }
+    // bathrooms: look for "banheiros"
+    else if (textVal.includes("banheiros")) {
+      property.bathrooms = extractNumberFromText(textVal);
+    }
+    // area: look for "m²" and "área aproximada"
+    else if (textVal.includes("m²")) {
+      // In the example, the area is under "área aproximada" with line break, pick first matching number
+      property.area = extractNumberFromText(textVal);
+    }
+  });
+
+  // origin: fixed string "net imoveis"
+  property.origin = "net imoveis";
+
+  // datePosted is not present in provided html, keep empty string
+
+  return property;
+}
+```
+This functions parses the property detail page HTML and extracts the data into the specified schema. It gracefully defaults missing numeric fields to zero and missing strings to "". The link must be passed from your puppeteer crawl context.

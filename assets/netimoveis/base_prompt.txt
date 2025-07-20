@@ -1,0 +1,22 @@
+i will supply you with an html file. this is from a property for rent listing website called net imoveis.
+my goal is to have all properties listed (from all pages) saved as a json following the below schema.
+i will use puppeteer to load the page and perform the following:
+- go through the listing and obtain all properties information
+- go through all pages
+- return a json array with the properties listed
+generate the pupeteer code in typescript that will perform this task.
+type schema = {
+  link: string;
+  title: string;
+  bedrooms: number;
+  area: number;
+  bathrooms: number;
+  price: number;
+  iptu: number;
+  condominio: number;
+  totalPrice: number;
+  location: string;
+  datePosted: string;
+  origin: string;
+};
+

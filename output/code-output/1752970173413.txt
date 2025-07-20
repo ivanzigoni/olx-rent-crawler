@@ -1,0 +1,216 @@
+```typescript
+import puppeteer from 'puppeteer';
+
+type Property = {
+  link: string;
+  title: string;
+  bedrooms: number;
+  area: number;
+  bathrooms: number;
+  price: number;
+  iptu: number;
+  condominio: number;
+  totalPrice: number;
+  location: string;
+  datePosted: string;
+  origin: string;
+};
+
+async function scrapeNetImoveis(startUrl: string): Promise<Property[]> {
+  const browser = await puppeteer.launch({ headless: true });
+  const page = await browser.newPage();
+
+  const properties: Property[] = [];
+
+  // Normalize and parse currency and numbers from Brazilian format e.g. "R$ 1.500,00"
+  const parseBrazilianCurrency = (value: string): number => {
+    if (!value) return 0;
+    // Remove currency symbol and spaces, replace '.' with '' and ',' with '.'
+    const normalized = value
+      .replace(/[^\d,.-]+/g, '') // remove non-numeric except , and .
+      .replace(/\./g, '')
+      .replace(',', '.');
+    const parsed = parseFloat(normalized);
+    return isNaN(parsed) ? 0 : parsed;
+  };
+
+  // Parse area strings like "76,43m²" or "80m²"
+  const parseArea = (areaStr: string): number => {
+    if (!areaStr) return 0;
+    const match = areaStr.replace(/\s/g, '').match(/([\d,.]+)/);
+    if (!match) return 0;
+    return parseBrazilianCurrency(match[1]);
+  };
+
+  // Parse integer number from string
+  const parseIntSafe = (str: string): number => {
+    if (!str) return 0;
+    const parsed = parseInt(str, 10);
+    return isNaN(parsed) ? 0 : parsed;
+  };
+
+  // Parse bathrooms string which sometimes can be "2" or "2 banheiros"
+  const parseBathrooms = (str: string): number => {
+    if (!str) return 0;
+    const match = str.match(/\d+/);
+    return match ? parseInt(match[0], 10) : 0;
+  };
+
+  // Extract properties on the current page
+  async function extractPropertiesOnPage(): Promise<Property[]> {
+    return await page.$$eval('article.card-imovel', (articles) => {
+      const parseBrazilianCurrencyInner = (value: string): number => {
+        if (!value) return 0;
+        const normalized = value
+          .replace(/[^\d,.-]+/g, '')
+          .replace(/\./g, '')
+          .replace(',', '.');
+        const parsed = parseFloat(normalized);
+        return isNaN(parsed) ? 0 : parsed;
+      };
+      const parseAreaInner = (areaStr: string): number => {
+        if (!areaStr) return 0;
+        const match = areaStr.replace(/\s/g, '').match(/([\d,.]+)/);
+        if (!match) return 0;
+        return parseBrazilianCurrencyInner(match[1]);
+      };
+      const parseBathroomsInner = (str: string): number => {
+        if (!str) return 0;
+        const match = str.match(/\d+/);
+        return match ? parseInt(match[0], 10) : 0;
+      };
+      return articles.map((article) => {
+        // Link
+        const linkElem = article.querySelector('a.link-imovel');
+        let link = linkElem?.getAttribute('href') || '';
+        if (link && !link.startsWith('http')) {
+          link = 'https://www.netimoveis.com' + link;
+        }
+
+        // Title - from h2 in class "tipo"
+        const h2 = article.querySelector('.imovel-info > .imovel-title > .tipo > h2');
+        const title = h2?.textContent?.trim() || '';
+
+        // Bedrooms - from icone + description, class quartos
+        const bedroomsElem = article.querySelector('.imovel-caracteristicas .caracteristica.quartos');
+        let bedrooms = 0;
+        if (bedroomsElem) {
+          const bedroomsText = bedroomsElem.textContent || '';
+          const match = bedroomsText.match(/\d+/);
+          bedrooms = match ? parseInt(match[0], 10) : 0;
+        }
+
+        // Area - class area (e.g. "76,43 m²")
+        const areaElem = article.querySelector('.imovel-caracteristicas .caracteristica.area');
+        let area = 0;
+        if (areaElem) {
+          area = parseAreaInner(areaElem.textContent || '');
+        }
+
+        // Bathrooms - class banheiros
+        const bathroomsElem = article.querySelector('.imovel-caracteristicas .caracteristica.banheiros');
+        const bathrooms = bathroomsElem ? parseBathroomsInner(bathroomsElem.textContent || '') : 0;
+
+        // Price - in .imovel-valor > .valor
+        const priceElem = article.querySelector('.imovel-valor .valor');
+        const price = priceElem ? parseBrazilianCurrencyInner(priceElem.textContent || '') : 0;
+
+        // Condominio - in .imovel-valor > .condominio, format "+R$ 479 - condomínio"
+        const condominioElem = article.querySelector('.imovel-valor .condominio');
+        const condominio = condominioElem ? parseBrazilianCurrencyInner(condominioElem.textContent || '') : 0;
+
+        // IPTU - not found in provided HTML explicitly, so we default 0
+        const iptu = 0;
+
+        // Total price = price + condominio + iptu (iptu zero here)
+        const totalPrice = price + condominio + iptu;
+
+        // Location - from .imovel-title > .endereco
+        const locationElem = article.querySelector('.imovel-info > .imovel-title > .endereco');
+        const location = locationElem?.textContent?.trim() || '';
+
+        // Date posted / updated date - from .imovel-valor > .ultima-atualizacao text (e.g. "Atualizado há mais de uma semana")
+        const dateElem = article.querySelector('.imovel-valor .ultima-atualizacao');
+        const datePosted = dateElem?.textContent?.trim() || '';
+
+        // Origin - static string "netimoveis"
+        const origin = 'netimoveis';
+
+        // Compose object
+        return {
+          link,
+          title,
+          bedrooms,
+          area,
+          bathrooms,
+          price,
+          iptu,
+          condominio,
+          totalPrice,
+          location,
+          datePosted,
+          origin,
+        };
+      });
+    });
+  }
+
+  await page.goto(startUrl, { waitUntil: 'networkidle2' });
+
+  while (true) {
+    // Wait to ensure listings loaded
+    await page.waitForSelector('article.card-imovel', { timeout: 10000 }).catch(() => {
+      // No properties on page - break loop
+      return;
+    });
+
+    // Extract properties on current page
+    const propertiesOnPage = await extractPropertiesOnPage();
+    properties.push(...propertiesOnPage);
+
+    // Check if there is an enabled "Próximo" (next) button in pagination
+    const nextBtnDisabled = await page.$eval('nav ul.pagination.simple-pagination li.clnext', (li) =>
+      li.classList.contains('disabled'),
+    );
+
+    if (nextBtnDisabled) {
+      break; // no more pages
+    }
+
+    // Click next and wait for page to load
+    await Promise.all([
+      page.click('nav ul.pagination.simple-pagination li.clnext a, nav ul.pagination.simple-pagination li.clnext span'),
+      page.waitForNavigation({ waitUntil: 'networkidle2' }),
+    ]);
+  }
+
+  await browser.close();
+  return properties;
+}
+
+// Example usage (async context):
+// (async () => {
+//   const url = 'https://www.netimoveis.com/aluguel-minas-gerais-belo-horizonte/';
+//   const results = await scrapeNetImoveis(url);
+//   console.log(JSON.stringify(results, null, 2));
+// })();
+
+export { scrapeNetImoveis, Property };
+```
+  
+# Explanation
+
+- The script launches Puppeteer in headless mode.
+- It visits the given starting URL.
+- It scrapes all property listings on the page by selecting `article.card-imovel`.
+- For each property, it extracts fields as per the schema.
+  - Price and fees are parsed from Brazilian format (with '.' as thousands and ',' as decimals).
+  - Area figures are parsed similarly.
+  - Some fields like IPTU are missing in provided HTML, so we default to 0.
+- After scraping the current page, it checks if a "Próximo" (Next) button is enabled.
+- If yes, it clicks the next button, waits for navigation, and continues scraping.
+- If not, it ends and returns the collected array of properties.
+- The code prioritizes readability, maintainability, and smart reusable parsing.
+- It exports the function and type for integration in enterprise pipelines.
+
+This satisfies the request to scrape all pages fully, returning a JSON array of properties with the complete schema.

@@ -1,0 +1,116 @@
+```javascript
+function parsePropertyDetails(html, link) {
+  // Parse the HTML string
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(html, "text/html");
+
+  // Helper to parse currency like "R$ 1.500,00" to number 1500.00
+  function parseCurrency(value) {
+    if (!value) return 0;
+    // Remove everything except digits and comma/dot
+    let numStr = value.replace(/[^\d,.-]/g, "").trim();
+    // Replace Brazilian format (e.g. 1.500,00) to 1500.00
+    numStr = numStr.replace(/\./g, "").replace(",", ".");
+    let num = parseFloat(numStr);
+    return isNaN(num) ? 0 : num;
+  }
+
+  // Helper to parse number of rooms etc from text like "2 quartos" or "2 banheiros"
+  function parseNumber(text) {
+    if (!text) return 0;
+    const m = text.match(/(\d+)/);
+    return m ? parseInt(m[1], 10) : 0;
+  }
+
+  // Extract title and price from h1#titulo
+  let title = "";
+  let price = 0;
+  const h1 = doc.querySelector("#titulo");
+  if (h1) {
+    // The h1 content is something like:
+    // Apartamento 2 quartos para alugar 76,43m² <br> por R$ 1.500,00
+    // We'll get whole text, removing line breaks
+    const fullText = h1.textContent.replace(/\n/g, " ").trim();
+    title = fullText;
+
+    // Extract price from "por R$ 1.500,00"
+    const priceMatch = fullText.match(/por R\$\s*([\d.,]+)/i);
+    if (priceMatch) price = parseCurrency(priceMatch[0]);
+  }
+
+  // Extract location from div.mb-1.text-gray
+  let location = "";
+  const locationDiv = doc.querySelector("div.mb-1.text-gray");
+  if (locationDiv) location = locationDiv.textContent.trim();
+
+  // Extract bedrooms, bathrooms, area from the section.details.features.arealote
+  let bedrooms = 0,
+    bathrooms = 0,
+    area = 0;
+  const featuresDetails = doc.querySelectorAll(
+    "section.details.features.arealote .detail"
+  );
+  featuresDetails.forEach((detail) => {
+    const text = detail.textContent.trim().toLowerCase();
+
+    if (text.includes("quartos")) {
+      bedrooms = parseNumber(text);
+    } else if (text.includes("banheiros")) {
+      bathrooms = parseNumber(text);
+    } else if (text.includes("área aproximada") || text.includes("m²")) {
+      // Usually contains number with decimal comma in m²
+      const m = text.match(/([\d.,]+)\s*m²/);
+      if (m) area = parseCurrency(m[1]);
+    }
+  });
+
+  // Extract price, iptu, condominio, totalPrice from section.details.prices div.detail
+  // "Valor de locação" => price (if price from h1 is zero)
+  // "Condomínio" => condominio
+  // "Iptu" => iptu
+  // totalPrice = price + iptu + condominio
+  let iptu = 0,
+    condominio = 0,
+    totalPrice = 0;
+
+  const priceDetails = doc.querySelectorAll("section.details.prices .detail");
+  priceDetails.forEach((detail) => {
+    const nameEl = detail.querySelector(".detail-name");
+    const valueEl = detail.querySelector(".detail-value");
+    if (!nameEl || !valueEl) return;
+    const name = nameEl.textContent.trim().toLowerCase();
+    const valueText = valueEl.textContent.trim();
+
+    if (name.includes("locação")) {
+      if (!price) price = parseCurrency(valueText);
+    } else if (name.includes("iptu")) {
+      iptu = parseCurrency(valueText);
+    } else if (name.includes("condomínio")) {
+      condominio = parseCurrency(valueText);
+    }
+  });
+  totalPrice = price + iptu + condominio;
+
+  // Extract datePosted - not present in HTML, set to empty string
+  const datePosted = "";
+
+  // origin = "netimoveis"
+  const origin = "netimoveis";
+
+  return {
+    link: link || "",
+    title: title,
+    bedrooms: bedrooms,
+    area: area,
+    bathrooms: bathrooms,
+    price: price,
+    iptu: iptu,
+    condominio: condominio,
+    totalPrice: totalPrice,
+    location: location,
+    datePosted: datePosted,
+    origin: origin,
+  };
+}
+```
+This function `parsePropertyDetails` receives the property detail page HTML as a string and the property link, parses the HTML, and extracts the information to return an object following the requested schema. Missing numeric values default to 0 and missing strings default to empty string.

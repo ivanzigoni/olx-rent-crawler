@@ -142,7 +142,7 @@ async function scrapeZapImoveis(
           const totalPrice =
             Number(price ?? 0) + Number(iptu ?? 0) + Number(condominio ?? 0);
 
-          const datePosted = "";
+          const datePosted = "N/A";
           const origin = "ZI";
 
           return {
@@ -205,7 +205,12 @@ async function execute(browser?: Browser) {
 
   fs.mkdirSync(buffer_path);
 
-  const b = browser ?? (await puppeteer.launch({ headless: false }));
+  const b =
+    browser ??
+    (await puppeteer.launch({
+      headless: false,
+      // args: ["--disable-features=site-per-process"],
+    }));
 
   const listings = await scrapeZapImoveis(url, b);
 

@@ -2,7 +2,8 @@ import cp from "node:child_process";
 import puppeteer from "puppeteer";
 import olx from "./crawlers/olx";
 import vr from "./crawlers/viva-real";
-import vi from "./crawlers/zap-imoveis";
+import zi from "./crawlers/zap-imoveis";
+import ni from "./crawlers/netimoveis";
 
 async function wrapper(fn: Function) {
   try {
@@ -15,15 +16,12 @@ async function wrapper(fn: Function) {
 
 async function main() {
   try {
-    // const browser = await puppeteer.launch({ headless: false });
-    const res = await Promise.allSettled([
-      wrapper(olx),
-      wrapper(vr),
-      wrapper(vi),
-    ]);
+    await Promise.allSettled([zi(), ni()]);
+    await Promise.allSettled([olx(), vr()]);
+
     cp.execSync("npm run datavis");
-    cp.execSync("npm run buffer:clean");
-    // await browser.close();
+
+    // cp.execSync("npm run buffer:clean");
   } catch (e) {
     console.log("ERROR");
     console.log(e);

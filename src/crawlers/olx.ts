@@ -5,14 +5,14 @@ import { getConfig } from "../config";
 
 async function scrapeAllProperties(url: string, browser: Browser) {
   const page = await browser.newPage();
-  page.on("console", (log: ConsoleMessage) => console.log("OLX", log.text));
+  page.on("console", (log: ConsoleMessage) => console.log("OLX", log.text()));
 
   let properties = [] as any[];
   let hasNextPage = true;
 
   try {
     while (hasNextPage) {
-      await page.goto(url, { waitUntil: "domcontentloaded" });
+      await page.goto(url, { waitUntil: "networkidle2" });
 
       const propsOnPage = await page.evaluate(() => {
         const cards = Array.from(
@@ -194,7 +194,12 @@ async function execute(browser?: Browser) {
 
   fs.mkdirSync(buffer_path);
 
-  const b = browser ?? (await puppeteer.launch({ headless: false }));
+  const b =
+    browser ??
+    (await puppeteer.launch({
+      headless: false,
+      args: ["--disable-features=site-per-process"],
+    }));
 
   for (const url of urls) {
     const allProperties = await scrapeAllProperties(url, b);

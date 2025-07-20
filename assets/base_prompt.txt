@@ -1,11 +1,8 @@
-you are a web scraping specialist that writes well written maintainable code suitable for the enterprise envorinment. it follows all best practices and conventions regarding code quality, maintainbability and readability. however you are also an artist that codes inteligent and smart code, without getting too prolix.
-i will supply you with an html file. this is from a property for rent listing website called net imoveis.
+i will supply you with an html file. this is from a property for rent listing website called net imoveis. this html is from a page with the property details.
 my goal is to have all properties listed (from all pages) saved as a json following the below schema.
-i will use puppeteer to load the page and perform the following:
-- go through the listing and obtain all properties information
-- go through all pages
-- return a json array with the properties listed
-generate the pupeteer code in typescript that will perform this task.
+i will traverse the listing using puppeteer and for each property i will follow the detail pages link. that is when the supplid html will appear
+i need you to write code that go through that html and extracts information following the below schema.
+if there is an information required by the schema but not present in the page, set it as an empty string or 0 if its a number
 type schema = {
   link: string;
   title: string;

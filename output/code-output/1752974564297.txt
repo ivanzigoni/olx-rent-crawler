@@ -1,0 +1,203 @@
+```typescript
+import puppeteer from "puppeteer";
+
+type Property = {
+  link: string;
+  title: string;
+  bedrooms: number;
+  area: number;
+  bathrooms: number;
+  price: number;
+  iptu: number;
+  condominio: number;
+  totalPrice: number;
+  location: string;
+  datePosted: string;
+  origin: string;
+};
+
+async function scrapeNetImoveis(url: string): Promise<Property[]> {
+  const browser = await puppeteer.launch({
+    headless: true,
+    // You can set headless false to debug
+  });
+  const page = await browser.newPage();
+  // Set user-agent as some sites block headless clients
+  await page.setUserAgent(
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko)" +
+      " Chrome/112.0.0.0 Safari/537.36"
+  );
+
+  let results: Property[] = [];
+
+  async function extractPropertiesInPage() {
+    // Wait for property cards to load
+    await page.waitForSelector("article.card-imovel");
+
+    const propertiesOnPage = await page.evaluate(() => {
+      // Helper to parse Brazilian real currency string to number
+      function parseBRLMoney(value: string): number {
+        if (!value) return 0;
+        // Remove "R$", spaces and dots as thousand separator, comma as decimal separator
+        const cleaned = value
+          .replace(/[R$\s]/g, "")
+          .replace(/\./g, "")
+          .replace(/,/g, ".");
+        const n = parseFloat(cleaned);
+        return isNaN(n) ? 0 : n;
+      }
+      // Helper to parse area string like "76,43m²" or "80m²" to number (square meters)
+      function parseArea(areaStr: string): number {
+        if (!areaStr) return 0;
+        const cleaned = areaStr.replace(/[^\d,\.]/g, "").replace(",", ".");
+        const n = parseFloat(cleaned);
+        return isNaN(n) ? 0 : n;
+      }
+      // Helper to parse integer from strings like "2 quartos" or just "2"
+      function parseIntegerFromText(text: string): number {
+        if (!text) return 0;
+        const match = text.match(/(\d+)/);
+        if (match) return parseInt(match[1], 10);
+        return 0;
+      }
+
+      const props: Property[] = [];
+
+      const origin = window.location.hostname;
+
+      const cards = Array.from(document.querySelectorAll("article.card-imovel"));
+
+      for (const card of cards) {
+        // Link: from <a class="link-imovel">
+        let linkEl = card.querySelector("a.link-imovel");
+        let link = linkEl ? (linkEl as HTMLAnchorElement).href : "";
+
+        // Title: from h2 inside .imovel-title .tipo h2
+        let titleEl = card.querySelector(".imovel-title .tipo h2");
+        let title = titleEl ? titleEl.textContent?.trim() ?? "" : "";
+
+        // Location: from .imovel-title .endereco
+        let locationEl = card.querySelector(".imovel-title .endereco");
+        let location = locationEl ? locationEl.textContent?.trim() ?? "" : "";
+
+        // Bedrooms: from .caracteristica.quartos (number before "quartos")
+        let bedroomsEl = card.querySelector(".imovel-caracteristicas .caracteristica.quartos");
+        let bedrooms = bedroomsEl ? parseIntegerFromText(bedroomsEl.textContent || "") : 0;
+
+        // Area: from .caracteristica.area (number in m²)
+        let areaEl = card.querySelector(".imovel-caracteristicas .caracteristica.area");
+        let area = areaEl
+          ? parseArea(
+              (areaEl.textContent || "")
+                .replace("m²", "")
+                .trim()
+            )
+          : 0;
+
+        // Bathrooms: from .caracteristica.banheiros
+        let bathroomsEl = card.querySelector(".imovel-caracteristicas .caracteristica.banheiros");
+        let bathrooms = bathroomsEl ? parseIntegerFromText(bathroomsEl.textContent || "") : 0;
+
+        // Price: from .imovel-valor .valor, e.g. "R$ 1.500"
+        let priceEl = card.querySelector(".imovel-valor .valor");
+        let price = priceEl ? parseBRLMoney(priceEl.textContent || "") : 0;
+
+        // Condominio: from .imovel-valor .condominio, e.g. "+R$ 479 - condomínio"
+        let condominioEl = card.querySelector(".imovel-valor .condominio");
+        let condominio = 0;
+        if (condominioEl) {
+          // Some have "+R$ 479 - condomínio", we only want the R$ 479 part
+          let condText = condominioEl.textContent || "";
+          const condMatch = condText.match(/R\$[^\d]*([\d.,]+)/);
+          if (condMatch) condominio = parseBRLMoney("R$ " + condMatch[1]);
+        }
+
+        // IPTU: No explicit iptu found in sample html, setting 0
+        let iptu = 0;
+
+        // Total price: price + condominio + iptu
+        let totalPrice = price + condominio + iptu;
+
+        // Date posted: from .imovel-valor .ultima-atualizacao text
+        let datePostedEl = card.querySelector(".imovel-valor .ultima-atualizacao");
+        let datePosted = datePostedEl ? datePostedEl.textContent?.trim() ?? "" : "";
+
+        // Assemble property object
+        props.push({
+          link,
+          title,
+          bedrooms,
+          area,
+          bathrooms,
+          price,
+          iptu,
+          condominio,
+          totalPrice,
+          location,
+          datePosted,
+          origin,
+        });
+      }
+
+      return props;
+    });
+
+    return propertiesOnPage;
+  }
+
+  async function hasNextPage(): Promise<boolean> {
+    // Look for next button that is not disabled
+    // The pagination is in <nav><ul class="pagination"> and next is li.clnext
+    return await page.evaluate(() => {
+      const nextBtn = document.querySelector("nav ul.pagination li.clnext");
+      if (!nextBtn) return false;
+      return !nextBtn.classList.contains("disabled");
+    });
+  }
+
+  async function goToNextPage() {
+    // Click next button
+    await page.evaluate(() => {
+      const nextBtn = document.querySelector("nav ul.pagination li.clnext");
+      if (nextBtn && !nextBtn.classList.contains("disabled")) {
+        (nextBtn.querySelector("span") || nextBtn.querySelector("a") || nextBtn).click();
+      }
+    });
+    // Wait for navigation or content refresh - preferably wait for property cards to appear
+    await page.waitForTimeout(3000); // wait for 3s for content to reload, adjust if needed
+    // Alternatively we can wait for some selector refresh or network idle, but the example lacks navigation events
+  }
+
+  // Load first page
+  await page.goto(url, { waitUntil: "domcontentloaded" });
+
+  while (true) {
+    const props = await extractPropertiesInPage();
+    results = results.concat(props);
+
+    if (!(await hasNextPage())) {
+      break;
+    }
+    await goToNextPage();
+  }
+
+  await browser.close();
+
+  return results;
+}
+
+// Example usage (commented for your control)
+// scrapeNetImoveis("https://www.netimoveis.com/some-listing-url?type=locacao")
+//   .then((data) => console.log(JSON.stringify(data, null, 2)))
+//   .catch(console.error);
+
+export { scrapeNetImoveis, Property };
+```
+This TypeScript puppeteer script loads the given URL on netimoveis website, extracts property data from all pages, and returns a JSON array of Property objects according to your schema. It:
+
+- Selects all properties on each page.
+- Extracts link, title, bedrooms, area, bathrooms, price, condominio, iptu, totalPrice, location, date posted, and origin hostname.
+- Handles pagination by clicking the next page button until disabled.
+- Handles currency and area parsing from Brazilian formatted strings.
+
+Adjust the selectors or waiting strategy if needed depending on actual page behavior during runtime.
