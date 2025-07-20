@@ -22,22 +22,18 @@ async function scrapeNetImoveis(
   url: string,
   browser: Browser
 ): Promise<Property[]> {
-  console.log("Starting scrapeNetImoveis function");
   const page = await browser.newPage();
   page.on("console", (log: ConsoleMessage) =>
-    console.log("NI [MAIN_PAGE]", log.text())
+    console.log("[NETIMOVEIS]", log.text())
   );
-  console.log("New page created");
 
   // Set user-agent as some sites block headless clients
-  console.log("Setting user agent...");
   await page.setUserAgent(
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko)" +
       " Chrome/112.0.0.0 Safari/537.36"
   );
 
   let results: Property[] = [];
-  console.log("Initialized empty results array");
 
   async function extractUrls() {
     return page.evaluate(() => {
@@ -76,7 +72,7 @@ async function scrapeNetImoveis(
         totalPrice: 0,
         location: "",
         datePosted: "N/A",
-        origin: "NI",
+        origin: "NETIMOVEIS",
       };
 
       // title: first h1 with id="titulo"
@@ -138,9 +134,6 @@ async function scrapeNetImoveis(
         // area: look for "m²" and "área aproximada"
         else if (textVal.includes("m²")) {
           // In the example, the area is under "área aproximada" with line break, pick first matching number
-          console.log("=============================================");
-          console.log("AREA: ", textVal);
-          console.log("DIGIT: ", textVal.replace(/\D/g, ""));
           p.area = Number(textVal.split(",")[0].replace(/\D/g, ""));
         }
       });
@@ -150,27 +143,22 @@ async function scrapeNetImoveis(
   }
 
   async function hasNextPage(): Promise<boolean> {
-    console.log("Checking if next page exists...");
     // Look for next button that is not disabled
     return await page.evaluate(() => {
       const nextBtn = document.querySelector("nav ul.pagination li.clnext");
       if (!nextBtn) {
-        console.log("No next button found");
         return false;
       }
       const hasNext = !nextBtn.classList.contains("disabled");
-      console.log(`Next button found, disabled status: ${!hasNext}`);
       return hasNext;
     });
   }
 
   async function goToNextPage() {
-    console.log("Attempting to go to next page...");
     // Click next button
     await page.evaluate(() => {
       const nextBtn = document.querySelector("nav ul.pagination li.clnext");
       if (nextBtn && !nextBtn.classList.contains("disabled")) {
-        console.log("Clicking next button...");
         (
           (nextBtn.querySelector("span") ||
             nextBtn.querySelector("a") ||
@@ -178,10 +166,6 @@ async function scrapeNetImoveis(
         ).click();
       }
     });
-    console.log("Waiting for navigation to complete...");
-    // Wait for navigation or content refresh
-    // await page.waitForTimeout(3000); // wait for 3s for content to reload
-    console.log("Navigation wait complete");
   }
 
   const urls: string[] = [];

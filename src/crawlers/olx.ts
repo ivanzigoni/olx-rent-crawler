@@ -5,7 +5,7 @@ import { getConfig } from "../config";
 
 async function scrapeAllProperties(url: string, browser: Browser) {
   const page = await browser.newPage();
-  page.on("console", (log: ConsoleMessage) => console.log("OLX", log.text()));
+  page.on("console", (log: ConsoleMessage) => console.log("[OLX]", log.text()));
 
   let properties = [] as any[];
   let hasNextPage = true;

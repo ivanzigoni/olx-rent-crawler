@@ -10,7 +10,7 @@ async function main() {
     await Promise.allSettled([zi(), ni()]);
     await Promise.allSettled([olx(), vr()]);
     cp.execSync("npm run datavis");
-    cp.execSync("npm run buffer:clean");
+    // cp.execSync("npm run buffer:clean");
   } catch (e) {
     console.log("ERROR");
     console.log(e);

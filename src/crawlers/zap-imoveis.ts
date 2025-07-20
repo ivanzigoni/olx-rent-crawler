@@ -23,7 +23,9 @@ async function scrapeZapImoveis(
   browser: Browser
 ): Promise<Property[]> {
   const page = await browser.newPage();
-  page.on("console", (log: ConsoleMessage) => console.log("[ZI]", log.text()));
+  page.on("console", (log: ConsoleMessage) =>
+    console.log("[ZAPIMOVEIS]", log.text())
+  );
 
   const properties: Property[] = [];
 
@@ -31,7 +33,11 @@ async function scrapeZapImoveis(
     await page.goto(url, { waitUntil: "domcontentloaded" });
 
     while (true) {
-      await page.waitForSelector('li[data-cy="rp-property-cd"] > a');
+      try {
+        await page.waitForSelector('li[data-cy="rp-property-cd"] > a');
+      } catch (e) {
+        continue;
+      }
 
       const pageProperties = await page.evaluate(() => {
         const anchors = Array.from(
@@ -142,9 +148,6 @@ async function scrapeZapImoveis(
           const totalPrice =
             Number(price ?? 0) + Number(iptu ?? 0) + Number(condominio ?? 0);
 
-          const datePosted = "N/A";
-          const origin = "ZI";
-
           return {
             link,
             title,
@@ -156,8 +159,8 @@ async function scrapeZapImoveis(
             condominio: condominio ? Number(condominio) : 0,
             totalPrice: totalPrice ? Number(totalPrice) : 0,
             location: locationText,
-            datePosted,
-            origin,
+            datePosted: "N/A",
+            origin: "ZAPIMOVEIS",
           };
         });
       });

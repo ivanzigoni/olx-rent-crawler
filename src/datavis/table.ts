@@ -12,6 +12,7 @@ interface Property {
   condominio: number;
   location: string;
   datePosted: string;
+  origin: string;
 }
 
 export async function generatePropertiesHtml(
@@ -22,6 +23,21 @@ export async function generatePropertiesHtml(
   // Load JSON array
   const jsonData = await fs.readFile(jsonFilePath, "utf-8");
   const properties: Property[] = JSON.parse(jsonData);
+
+  const uniqueOrigin = properties.reduce(
+    (acc, p) => {
+      if (!acc.accumulator[p.origin]) {
+        acc.accumulator[p.origin] = true;
+        acc.result.push(p.origin);
+      }
+
+      return acc;
+    },
+    {
+      accumulator: {},
+      result: [],
+    } as { accumulator: { [key: string]: boolean }; result: string[] }
+  );
 
   // Columns data for table and sorting info
   const columns = [
@@ -93,7 +109,7 @@ export async function generatePropertiesHtml(
 </style>
 </head>
 <body>
-
+<h4>ORIGENS: ${uniqueOrigin.result.join(", ")}</h4>
 <table id="propertiesTable">
   <thead>
     <tr>
@@ -145,7 +161,7 @@ export async function generatePropertiesHtml(
     tbody.innerHTML = pageData
       .map((item, i) => \`
         <tr class=\${i%2===0?"":"row-dark"}>
-          <td><a href="\${item.link}" target="_blank" rel="noopener noreferrer">\${item.origin}</a></td>
+          <td><a href="\${item.link}" target="_blank" rel="noopener noreferrer">\${item.origin.substring(0,3)}</a></td>
           <td>\${item.title}</td>
           <td>\${item.price.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</td>
           <td>\${item.iptu.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</td>

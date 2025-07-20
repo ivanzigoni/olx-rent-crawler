@@ -7,7 +7,9 @@ const { getConfig } = require("../config");
 
 async function scrapeAllProperties(initialURL: string, browser: Browser) {
   const page = await browser.newPage();
-  page.on("console", (log: ConsoleMessage) => console.log("[VR]", log.text()));
+  page.on("console", (log: ConsoleMessage) =>
+    console.log("[VIVAREAL]", log.text())
+  );
 
   const results: any[] = [];
 
@@ -127,7 +129,7 @@ async function scrapeAllProperties(initialURL: string, browser: Browser) {
               iptu: i,
               totalPrice: p + c + i,
               datePosted: "N/A",
-              origin: "VR",
+              origin: "VIVAREAL",
             });
           } catch (ex) {
             // Catch any errors per item to not fail the entire extraction
