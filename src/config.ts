@@ -5,14 +5,14 @@ export type Env = {
   olx: {
     startUrl: string[];
   };
+  netimoveis: {
+    startUrl: string[];
+  };
   "viva-real": {
     startUrl: string;
   };
   "zap-imoveis": {
     startUrl: string;
-  };
-  netimoveis: {
-    startUrl: string[];
   };
 };
 
